@@ -3,6 +3,9 @@ import torch
 import torch.nn as nn
 from typing import Dict, Tuple
 
+from celluloid import Camera
+import matplotlib.pyplot as plt
+import numpy as np
 
 class DiffusionModel(nn.Module):
     def __init__(
@@ -40,7 +43,8 @@ class DiffusionModel(nn.Module):
 
         return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
-    def sample(self, m: torch.Tensor, p: torch.Tensor, size: Tuple[int]) -> torch.Tensor:
+    def sample(self, m: torch.Tensor, p: torch.Tensor, size: Tuple[int],
+               plot=False) -> torch.Tensor:
 
         num_samples = m.shape[0]
         device = m.device
@@ -53,7 +57,31 @@ class DiffusionModel(nn.Module):
             x_i = self.inv_sqrt_alphas[i] * (x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
 
         return x_i
+    
+    def sample_single(self, m: torch.Tensor, p: torch.Tensor, plot=False, name='animation') -> torch.Tensor:
+        device = m.device
+        x_i = torch.randn(1, 1, 30, 30, device=device)
 
+        m, p = m.unsqueeze(0), p.unsqueeze(0)
+        if plot:
+            fig = plt.figure(dpi=250)
+            camera = Camera(fig)
+            plt.imshow(np.transpose(x_i.squeeze(0).numpy(), (1, 2, 0)), cmap='inferno')
+            plt.title(f"Point: {tuple(p[0].numpy())}, Momentum {torch.norm(m) ** 2:.2f}")
+            plt.legend(f'Step №{0}', loc='lower left')
+            camera.snap() 
+        
+        for i in tqdm(range(self.num_timesteps, 0, -1), leave=False):
+            z = torch.randn(1, 1, 30, 30, device=device) if i > 1 else 0
+            eps = self.eps_model(x_i, m, p, torch.tensor(i / self.num_timesteps).repeat(1, 1).to(device))
+            x_i = self.inv_sqrt_alphas[i] * (x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
+            if plot:
+                plt.imshow(np.transpose(x_i.squeeze(0).numpy(), (1, 2, 0)), cmap='inferno')
+                plt.legend(f'Step №{i}', loc='lower left')
+                camera.snap() 
+        if plot:
+            anim = camera.animate(interval=150, blit=True)
+            anim.save(name + '.gif', writer='imagemagick')
 
 def get_schedules(beta1: float, beta2: float, num_timesteps: int) -> Dict[str, torch.Tensor]:
     assert beta1 < beta2 < 1.0, "beta1 and beta2 must be in (0, 1)"
