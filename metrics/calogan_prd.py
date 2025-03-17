@@ -78,7 +78,7 @@ embedder = embedder.to(DEVICE)
 
 
 def get_energy_embedding(data):
-    return embedder.get_encoding(data).detach().numpy()
+    return embedder.get_encoding(data).detach().cpu().numpy()
 
 
 def check_tensor_is_finite(t: np.ndarray) -> torch.Tensor:

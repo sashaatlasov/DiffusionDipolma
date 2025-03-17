@@ -41,9 +41,9 @@ def train_model(config, datapath, savepath, checkpoint=None):
     for i in range(config['epochs']):
         loss = train_epoch(dm, train_dataloader, optimizer)
         print(f"Epoch {i + 1} | Loss {loss}")
-        if i % 10 == 0:
-            total_prd, cond_prd = calc_metrics(dm, val_dataloader)
-            print(f"PRD-AUC: {total_prd}, Conditional PRD-AUC: {cond_prd}")
+    
+    total_prd, cond_prd = calc_metrics(dm, val_dataloader)
+    print(f"FINAL -- PRD-AUC: {total_prd}, Conditional PRD-AUC: {cond_prd}")
 
     torch.save(dm.state_dict(), savepath)
 
