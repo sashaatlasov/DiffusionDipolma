@@ -99,9 +99,10 @@ def calc_metrics(model, val_data, num_batches=None):
             dim_bins=torch.Tensor([3, 3]),
             condition_index=0
         )
-    val_data[1][0], gen_data[1][0] = val_data[1][0].detach().cpu().numpy(), gen_data[1][0].detach().cpu().numpy()
+    val_cond = val_data[1][0].detach().cpu().numpy()
+    gen_cond = gen_data[1][0].detach().cpu().numpy()
 
-    result = metric.evaluate((val_data[0], val_data[1][0]), (gen_data[0], gen_data[1][0]))
+    result = metric.evaluate((val_data[0], val_cond), (gen_data[0], gen_cond))
     cond_prd = np.mean(result)
     plot_bins_prd(result)
 
