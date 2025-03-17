@@ -233,3 +233,10 @@ def get_physics_dataset(path: str, train: bool = True, val_ratio: float = 0.5,
 
     return PhysicsDataset(energy, point, momentum,
                           transform=transform, inverse_transform=inverse_transform)
+
+
+def get_dataloaders(datapath, batch_size):
+    train = UnifiedDatasetWrapper(get_physics_dataset(datapath, train=True))
+    val = UnifiedDatasetWrapper(get_physics_dataset(datapath, train=False))
+    return torch.utils.data.DataLoader(train, batch_size), torch.utils.data.DataLoader(val, batch_size=32)
+
