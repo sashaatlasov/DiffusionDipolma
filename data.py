@@ -238,5 +238,5 @@ def get_physics_dataset(path: str, train: bool = True, val_ratio: float = 0.5,
 def get_dataloaders(datapath, batch_size):
     train = UnifiedDatasetWrapper(get_physics_dataset(datapath, train=True))
     val = UnifiedDatasetWrapper(get_physics_dataset(datapath, train=False))
-    return torch.utils.data.DataLoader(train, batch_size), torch.utils.data.DataLoader(val, batch_size=32)
+    return torch.utils.data.DataLoader(train, batch_size), torch.utils.data.DataLoader(val, batch_size=batch_size)
 

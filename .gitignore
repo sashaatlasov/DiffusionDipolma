@@ -173,3 +173,5 @@ cython_debug/
 # ignore huge datafile
 data_demo/
 checkpoints/
+
+.DS_Store

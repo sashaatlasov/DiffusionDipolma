@@ -38,13 +38,13 @@ def train_model(config, datapath, savepath, checkpoint=None):
     train_dataloader, val_dataloader = get_dataloaders(datapath, config['batch_size'])
     optimizer = torch.optim.Adam(dm.parameters(), lr=config['learning_rate'])
 
-    for i in range(config['num_epochs']):
+    for i in range(config['epochs']):
         loss = train_epoch(dm, train_dataloader, optimizer)
         print(f"Epoch {i + 1} | Loss {loss}")
         if i % 10 == 0:
-            total_prd, cond_prd = calc_metrics(model, val_dataloader)
+            total_prd, cond_prd = calc_metrics(dm, val_dataloader)
             print(f"PRD-AUC: {total_prd}, Conditional PRD-AUC: {cond_prd}")
-            
+
     torch.save(dm.state_dict(), savepath)
 
 

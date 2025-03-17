@@ -12,6 +12,9 @@ from tqdm import tqdm
 
 from .prd_score import compute_prd_from_embedding
 
+from device import get_local_device
+DEVICE = get_local_device()
+
 
 class Regressor(nn.Module):
     def __init__(self):
@@ -69,8 +72,9 @@ def load_embedder(state_path: str):
     return embedder
 
 
-embedder_state_path = '/Users/sasaatlasov/Desktop/DiffusionDipolma/embedder_state.pt'#pathlib.Path(__file__).parent / pathlib.Path('./embedder_state.pt')
+embedder_state_path = pathlib.Path(__file__).parent.parent / pathlib.Path('./embedder_state.pt')
 embedder = load_embedder(str(embedder_state_path))
+embedder = embedder.to(DEVICE)
 
 
 def get_energy_embedding(data):
