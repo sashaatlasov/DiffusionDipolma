@@ -1,9 +1,54 @@
-from typing import Tuple, Any
+from typing import Tuple, List, Optional, Union, Any, Sequence
 
 import numpy as np
+from itertools import cycle
 import torch
 import torch.utils.data
 
+
+class RandomDataloader(torch.utils.data.DataLoader):
+    def __init__(self, dataset: torch.utils.data.Dataset, batch_size: int, *args, **kwargs):
+        sampler = torch.utils.data.sampler.RandomSampler(dataset, replacement=True)
+        random_sampler = torch.utils.data.sampler.BatchSampler(sampler, batch_size=batch_size,
+                                                               drop_last=False)
+
+        super().__init__(dataset, batch_sampler=random_sampler, *args, **kwargs)
+
+
+def get_random_infinite_dataloader(dataset: torch.utils.data.Dataset, batch_size: int, *args, **kwargs):
+    return cycle(RandomDataloader(dataset, batch_size=batch_size, *args, **kwargs))
+
+
+def collate_fn(els_list: Sequence[Union[Tuple, int, torch.Tensor]]):
+    if isinstance(els_list[0], tuple):
+        return tuple(collate_fn(list(a)) for a in zip(*els_list))
+    elif isinstance(els_list[0], int):
+        return torch.Tensor(els_list)
+    elif isinstance(els_list[0], torch.Tensor):
+        return torch.stack(tuple(els_list))
+    elif els_list[0] is None:
+        return None
+    else:
+        raise RuntimeError
+
+
+def stack_batches(batches_list):
+    if isinstance(batches_list[0], tuple):
+        return tuple(stack_batches(list(a)) for a in zip(*batches_list))
+    elif isinstance(batches_list[0], torch.Tensor):
+        return torch.concat(batches_list, dim=0)
+    elif batches_list[0] is None:
+        return None
+
+
+def move_batch_to(batch, device):
+    if isinstance(batch, tuple):
+        return tuple(move_batch_to(subbatch, device) for subbatch in batch)
+    elif batch is None:
+        return None
+    else:
+        return batch.to(device)
+    
 
 class UnifiedDatasetWrapper(torch.utils.data.Dataset):
     """

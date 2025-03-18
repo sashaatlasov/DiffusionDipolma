@@ -7,16 +7,18 @@ from celluloid import Camera
 import matplotlib.pyplot as plt
 import numpy as np
 
+from unet_small import UnetModel
+
 class DiffusionModel(nn.Module):
     def __init__(
         self,
-        eps_model: nn.Module,
         num_timesteps: int,
+        hidden_size: int,
         loss: str = 'l2',
         betas: Tuple[float, float] = (1e-4, 0.2),
     ):
         super().__init__()
-        self.eps_model = eps_model
+        self.eps_model = UnetModel(1, 1, hidden_size)
 
         for name, schedule in get_schedules(betas[0], betas[1], num_timesteps).items():
             self.register_buffer(name, schedule)
@@ -43,9 +45,9 @@ class DiffusionModel(nn.Module):
 
         return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
-    def sample(self, m: torch.Tensor, p: torch.Tensor, size: Tuple[int],
-               plot=False) -> torch.Tensor:
+    def sample(self, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
 
+        size = (1, 30, 30)
         num_samples = m.shape[0]
         device = m.device
 

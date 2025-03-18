@@ -5,9 +5,7 @@ from matplotlib import pyplot as plt
 
 from metrics.calogan_prd import plot_pr_aucs, calc_pr_rec_from_embeds, get_energy_embedding
 from metrics.metrics import ConditionBinsMetric, AveragePRDAUCMetric
-
-from device import get_local_device
-DEVICE = get_local_device()
+from utils import DEVICE
 
 def plot_bins_prd(prds):
     dims_bins_cnt = [3, 3]
@@ -54,9 +52,8 @@ def sample_energy(model, val_data, num_batches):
     for batch in tqdm(val_data):
         energy, point, momentum = batch[0], batch[1][0], batch[1][1]
         energy, point, momentum = energy.to(DEVICE), point.to(DEVICE), momentum.to(DEVICE)
-        shape = energy[0].shape
         with torch.no_grad():
-            samples = model.sample(momentum, point, shape)
+            samples = model.sample(momentum, point)
         cnt += 1 
         samples = get_energy_embedding(samples)
         real = get_energy_embedding(energy)
