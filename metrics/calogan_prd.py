@@ -12,8 +12,7 @@ from tqdm import tqdm
 
 from .prd_score import compute_prd_from_embedding
 
-from device import get_local_device
-DEVICE = get_local_device()
+from utils import DEVICE
 
 
 class Regressor(nn.Module):
@@ -117,7 +116,7 @@ def calc_pr_rec_from_embeds(data_real_embeds: np.ndarray, data_fake_embeds: np.n
 
 
 def plot_pr_aucs(precisions: List[np.ndarray], recalls: List[np.ndarray]):
-    plt.figure(figsize=(12, 12))
+    fig = plt.figure(figsize=(12, 12))
     pr_aucs = []  # list of all pr-auc values
     for i in range(len(recalls)):
         plt.step(recalls[i], precisions[i], color='b', alpha=0.2)
@@ -131,11 +130,7 @@ def plot_pr_aucs(precisions: List[np.ndarray], recalls: List[np.ndarray]):
 
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-
-    # plt.ylim([0.0, 1.05])
-    # plt.xlim([0.0, 1.0])
-    # print(np.mean(pr_aucs), np.std(pr_aucs))
     plt.legend()
     plt.title('PRD')
 
-    return pr_aucs
+    return pr_aucs, fig

@@ -38,6 +38,7 @@ def plot_bins_prd(prds):
     ax.axis('off')
     ax.set_title('Значение PRD-AUC в каждом из бинов при разбиении по эмбеддингам выходной матрицы')
     plt.show()
+    return fig
 
 def sample_energy(model, val_data, num_batches):   
 
@@ -86,7 +87,7 @@ def calc_metrics(model, val_data, num_batches=None):
     val_data, gen_data = sample_energy(model, val_data, num_batches)
 
     prec, rec = calc_pr_rec_from_embeds(val_data[0], gen_data[0])
-    result = plot_pr_aucs(prec, rec)
+    result, fig1 = plot_pr_aucs(prec, rec)
     total_prd = np.mean(result)
 
     calculated_metric = AveragePRDAUCMetric(num_clusters=20, num_runs=10,
@@ -101,9 +102,9 @@ def calc_metrics(model, val_data, num_batches=None):
 
     result = metric.evaluate((val_data[0], val_cond), (gen_data[0], gen_cond))
     cond_prd = np.mean(result)
-    plot_bins_prd(result)
+    fig2 = plot_bins_prd(result)
 
-    return total_prd, cond_prd
+    return total_prd, cond_prd, fig1, fig2
 
 
 

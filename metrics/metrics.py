@@ -479,7 +479,7 @@ class AveragePRDAUCMetric(PhysicsDataStatistic):
             return 0.  # zero recall or zero precision respectively
         precisions, recalls = PhysicsPRDMetric(num_clusters=self.num_clusters, num_runs=self.num_runs, enforce_balance=self.enforce_balance)\
             .evaluate(gen_data=gen_data, val_data=val_data)
-        pr_aucs = plot_pr_aucs(precisions=precisions, recalls=recalls)
+        pr_aucs, _ = plot_pr_aucs(precisions=precisions, recalls=recalls)
         plt.close()
         return np.mean(pr_aucs)
 
