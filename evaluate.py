@@ -88,18 +88,16 @@ def calc_stats(model, val_data, num_batches):
             all_point = torch.concatenate((all_point, point), 0)
             all_momentum = torch.concatenate((all_momentum, momentum), 0) 
         
+        print()
+
         if cnt == num_batches:
             break
     
     for met in PHYS_STATISTICS:
             name = met.NAME
-            r, s = get_stat(met, energy.detach().cpu(), samples.detach().cpu(), (point.detach().cpu(), momentum.detach().cpu()))
-            if name not in phys_stats_real.keys():
-                phys_stats_real[name] = r
-                phys_stats_samples[name] = s
-            else:
-                phys_stats_real[name] = np.concatenate((phys_stats_real[name], r))
-                phys_stats_samples[name] = np.concatenate((phys_stats_samples[name], s))
+            r, s = get_stat(met, all_real_embeds.detach().cpu(), all_sampled_embeds.detach().cpu(), (all_point.detach().cpu(), all_momentum.detach().cpu()))
+            phys_stats_real[name] = r
+            phys_stats_samples[name] = s
 
     return phys_stats_real, phys_stats_samples
 
