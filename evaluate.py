@@ -42,11 +42,12 @@ def plot_bins_prd(prds):
     return fig
 
 
-def plot_stat_distribution(real, sampled, name):
+def plot_stat_distribution(real, sampled, name, range=None):
     fig = plt.figure(dpi=150)
-    plt.hist(real, alpha=0.3, bins=50, label='Geant')
-    plt.hist(sampled, alpha=0.3, bins=50, label='Diffusion')
+    plt.hist(real, alpha=0.3, bins=50, density=True, label='Geant')
+    plt.hist(sampled, alpha=0.3, bins=50, density=True, label='Diffusion')
     plt.title(name)
+    plt.grid(axis='y')
     plt.legend()
     plt.show()
     return fig
@@ -64,8 +65,8 @@ def calc_stats(model, val_data, num_batches):
     phys_stats_real = {}
     phys_stats_samples = {}
 
-    all_sampled_embeds = None
-    all_real_embeds = None
+    all_sampled = None
+    all_real = None
     all_point = None
     all_momentum = None
 
@@ -77,25 +78,23 @@ def calc_stats(model, val_data, num_batches):
             samples = model.sample(momentum, point)
         cnt += 1 
 
-        if all_sampled_embeds is None:
-            all_sampled_embeds = samples
-            all_real_embeds = energy
+        if all_sampled is None:
+            all_sampled = samples
+            all_real = energy
             all_point = point
             all_momentum = momentum
         else:
-            all_sampled_embeds = torch.concatenate((all_sampled_embeds, samples), 0)
-            all_real_embeds = torch.concatenate((all_real_embeds, energy), 0)
+            all_sampled = torch.concatenate((all_sampled, samples), 0)
+            all_real = torch.concatenate((all_real, energy), 0)
             all_point = torch.concatenate((all_point, point), 0)
             all_momentum = torch.concatenate((all_momentum, momentum), 0) 
-        
-        print()
 
         if cnt == num_batches:
             break
     
     for met in PHYS_STATISTICS:
             name = met.NAME
-            r, s = get_stat(met, all_real_embeds.detach().cpu(), all_sampled_embeds.detach().cpu(), (all_point.detach().cpu(), all_momentum.detach().cpu()))
+            r, s = get_stat(met, all_real.detach().cpu(), all_sampled.detach().cpu(), (all_point.detach().cpu(), all_momentum.detach().cpu()))
             phys_stats_real[name] = r
             phys_stats_samples[name] = s
 
