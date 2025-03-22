@@ -57,14 +57,9 @@ def get_stat(stat, real, sampled, cond):
     return stat.evaluate_statistic((real, cond)), stat.evaluate_statistic((sampled, cond))
 
 
-def sample_energy(model, val_data, num_batches):   
+def calc_stats(model, val_data, num_batches):
 
     model.eval()
-
-    all_sampled_embeds = None
-    all_real_embeds = None
-    all_point = None
-    all_momentum = None
 
     phys_stats_real = {}
     phys_stats_samples = {}
@@ -79,13 +74,36 @@ def sample_energy(model, val_data, num_batches):
 
         for met in PHYS_STATISTICS:
             name = met.NAME
-            r, s = get_stat(met, energy, samples, (point, momentum))
+            r, s = get_stat(met, energy.detach().cpu(), samples.detach().cpu(), (point.detach().cpu(), momentum.detach().cpu()))
             if name not in phys_stats_real.keys():
                 phys_stats_real[name] = r
                 phys_stats_samples[name] = s
             else:
                 phys_stats_real[name] = np.concatenate((phys_stats_real[name], r))
                 phys_stats_samples[name] = np.concatenate((phys_stats_samples[name], s))
+        
+        if cnt == num_batches:
+            break
+
+    return phys_stats_real, phys_stats_samples
+
+
+def sample_energy(model, val_data, num_batches):   
+
+    model.eval()
+
+    all_sampled_embeds = None
+    all_real_embeds = None
+    all_point = None
+    all_momentum = None
+
+    cnt = 0
+    for batch in tqdm(val_data):
+        energy, point, momentum = batch[0], batch[1][0], batch[1][1]
+        energy, point, momentum = energy.to(DEVICE), point.to(DEVICE), momentum.to(DEVICE)
+        with torch.no_grad():
+            samples = model.sample(momentum, point)
+        cnt += 1 
 
         samples = get_energy_embedding(samples)
         real = get_energy_embedding(energy)
@@ -107,7 +125,7 @@ def sample_energy(model, val_data, num_batches):
     gen_data = (all_sampled_embeds, (all_point, all_momentum))
     val_data = (all_real_embeds, (all_point, all_momentum))
 
-    return val_data, gen_data, phys_stats_real, phys_stats_samples
+    return val_data, gen_data
 
 
 def calc_metrics(model, val_data, num_batches=None):
@@ -115,10 +133,7 @@ def calc_metrics(model, val_data, num_batches=None):
     if num_batches is None:
         num_batches = len(val_data) 
 
-    val_data, gen_data, phys_stats_real, phys_stats_samples = sample_energy(model, val_data, num_batches)
-
-    for name in phys_stats_samples.keys():
-        plot_stat_distribution(phys_stats_real[name], phys_stats_samples[name], name)
+    val_data, gen_data = sample_energy(model, val_data, num_batches)
 
     prec, rec = calc_pr_rec_from_embeds(val_data[0], gen_data[0])
     result, fig1 = plot_pr_aucs(prec, rec)
