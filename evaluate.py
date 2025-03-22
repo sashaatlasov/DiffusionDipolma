@@ -4,7 +4,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from metrics.calogan_prd import plot_pr_aucs, calc_pr_rec_from_embeds, get_energy_embedding
-from metrics.metrics import ConditionBinsMetric, AveragePRDAUCMetric
+from metrics.metrics import ConditionBinsMetric, AveragePRDAUCMetric, PHYS_STATISTICS
+from data import log1p_inverse_transform
 from utils import DEVICE
 
 def plot_bins_prd(prds):
@@ -40,6 +41,22 @@ def plot_bins_prd(prds):
     plt.show()
     return fig
 
+
+def plot_stat_distribution(real, sampled, name):
+    fig = plt.figure(dpi=150)
+    plt.hist(real, alpha=0.3, bins=50, label='Geant')
+    plt.hist(sampled, alpha=0.3, bins=50, label='Diffusion')
+    plt.title(name)
+    plt.legend()
+    plt.show()
+    return fig
+
+
+def get_stat(stat, real, sampled, cond):
+    real, sampled = log1p_inverse_transform(real), log1p_inverse_transform(sampled)
+    return stat.evaluate_statistic((real, cond)), stat.evaluate_statistic((sampled, cond))
+
+
 def sample_energy(model, val_data, num_batches):   
 
     model.eval()
@@ -49,6 +66,9 @@ def sample_energy(model, val_data, num_batches):
     all_point = None
     all_momentum = None
 
+    phys_stats_real = {}
+    phys_stats_samples = {}
+
     cnt = 0
     for batch in tqdm(val_data):
         energy, point, momentum = batch[0], batch[1][0], batch[1][1]
@@ -56,6 +76,17 @@ def sample_energy(model, val_data, num_batches):
         with torch.no_grad():
             samples = model.sample(momentum, point)
         cnt += 1 
+
+        for met in PHYS_STATISTICS:
+            name = met.NAME
+            r, s = get_stat(met, energy, samples, (point, momentum))
+            if name not in phys_stats_real.keys():
+                phys_stats_real[name] = r
+                phys_stats_samples[name] = s
+            else:
+                phys_stats_real[name] = np.concatenate((phys_stats_real[name], r))
+                phys_stats_samples[name] = np.concatenate((phys_stats_samples[name], s))
+
         samples = get_energy_embedding(samples)
         real = get_energy_embedding(energy)
 
@@ -76,7 +107,7 @@ def sample_energy(model, val_data, num_batches):
     gen_data = (all_sampled_embeds, (all_point, all_momentum))
     val_data = (all_real_embeds, (all_point, all_momentum))
 
-    return val_data, gen_data
+    return val_data, gen_data, phys_stats_real, phys_stats_samples
 
 
 def calc_metrics(model, val_data, num_batches=None):
@@ -84,7 +115,10 @@ def calc_metrics(model, val_data, num_batches=None):
     if num_batches is None:
         num_batches = len(val_data) 
 
-    val_data, gen_data = sample_energy(model, val_data, num_batches)
+    val_data, gen_data, phys_stats_real, phys_stats_samples = sample_energy(model, val_data, num_batches)
+
+    for name in phys_stats_samples.keys():
+        plot_stat_distribution(phys_stats_real[name], phys_stats_samples[name], name)
 
     prec, rec = calc_pr_rec_from_embeds(val_data[0], gen_data[0])
     result, fig1 = plot_pr_aucs(prec, rec)

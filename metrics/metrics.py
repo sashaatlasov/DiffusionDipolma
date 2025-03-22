@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from data import collate_fn, move_batch_to, stack_batches
-from device import get_local_device
+from utils import get_local_device
 from metrics import calogan_metrics, calogan_prd
 from metrics.calogan_prd import plot_pr_aucs, get_energy_embedding
 
