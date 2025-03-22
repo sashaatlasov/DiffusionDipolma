@@ -64,6 +64,11 @@ def calc_stats(model, val_data, num_batches):
     phys_stats_real = {}
     phys_stats_samples = {}
 
+    all_sampled_embeds = None
+    all_real_embeds = None
+    all_point = None
+    all_momentum = None
+
     cnt = 0
     for batch in tqdm(val_data):
         energy, point, momentum = batch[0], batch[1][0], batch[1][1]
@@ -72,7 +77,21 @@ def calc_stats(model, val_data, num_batches):
             samples = model.sample(momentum, point)
         cnt += 1 
 
-        for met in PHYS_STATISTICS:
+        if all_sampled_embeds is None:
+            all_sampled_embeds = samples
+            all_real_embeds = energy
+            all_point = point
+            all_momentum = momentum
+        else:
+            all_sampled_embeds = torch.concatenate((all_sampled_embeds, samples), 0)
+            all_real_embeds = torch.concatenate((all_real_embeds, energy), 0)
+            all_point = torch.concatenate((all_point, point), 0)
+            all_momentum = torch.concatenate((all_momentum, momentum), 0) 
+        
+        if cnt == num_batches:
+            break
+    
+    for met in PHYS_STATISTICS:
             name = met.NAME
             r, s = get_stat(met, energy.detach().cpu(), samples.detach().cpu(), (point.detach().cpu(), momentum.detach().cpu()))
             if name not in phys_stats_real.keys():
@@ -81,9 +100,6 @@ def calc_stats(model, val_data, num_batches):
             else:
                 phys_stats_real[name] = np.concatenate((phys_stats_real[name], r))
                 phys_stats_samples[name] = np.concatenate((phys_stats_samples[name], s))
-        
-        if cnt == num_batches:
-            break
 
     return phys_stats_real, phys_stats_samples
 
