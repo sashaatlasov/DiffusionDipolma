@@ -9,6 +9,7 @@ import numpy as np
 
 from unet_small import UnetModel
 
+
 class DiffusionModel(nn.Module):
     def __init__(
         self,
@@ -30,12 +31,13 @@ class DiffusionModel(nn.Module):
         elif loss == 'l1':
             self.criterion = nn.L1Loss()
         else:
-            raise ValueError('loss type is not supported') 
+            raise ValueError('loss type is not supported')
 
     def forward(self, x: torch.Tensor, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
         device = x.device
-        
-        timestep = torch.randint(1, self.num_timesteps + 1, (x.shape[0],), device=device)
+
+        timestep = torch.randint(
+            1, self.num_timesteps + 1, (x.shape[0],), device=device)
         eps = torch.randn_like(x, device=device)
 
         x_t = (
@@ -55,11 +57,13 @@ class DiffusionModel(nn.Module):
 
         for i in tqdm(range(self.num_timesteps, 0, -1), leave=False):
             z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
-            eps = self.eps_model(x_i, m, p, torch.tensor(i / self.num_timesteps).repeat(num_samples, 1).to(device))
-            x_i = self.inv_sqrt_alphas[i] * (x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
+            eps = self.eps_model(x_i, m, p, torch.tensor(
+                i / self.num_timesteps).repeat(num_samples, 1).to(device))
+            x_i = self.inv_sqrt_alphas[i] * (
+                x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
 
         return x_i
-    
+
     def sample_single(self, m: torch.Tensor, p: torch.Tensor, plot=False, name='animation') -> torch.Tensor:
         device = m.device
         x_i = torch.randn(1, 1, 30, 30, device=device)
@@ -71,24 +75,29 @@ class DiffusionModel(nn.Module):
             plt.imshow(np.transpose(x_i.squeeze(0).numpy(), (1, 2, 0)), cmap='inferno')
             plt.title(f"Point: {tuple(p[0].numpy())}, Momentum {torch.norm(m) ** 2:.2f}")
             plt.legend(f'Step №{0}', loc='lower left')
-            camera.snap() 
-        
+            camera.snap()
+
         for i in tqdm(range(self.num_timesteps, 0, -1), leave=False):
             z = torch.randn(1, 1, 30, 30, device=device) if i > 1 else 0
-            eps = self.eps_model(x_i, m, p, torch.tensor(i / self.num_timesteps).repeat(1, 1).to(device))
-            x_i = self.inv_sqrt_alphas[i] * (x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
+            eps = self.eps_model(x_i, m, p, torch.tensor(
+                i / self.num_timesteps).repeat(1, 1).to(device))
+            x_i = self.inv_sqrt_alphas[i] * (
+                x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
             if plot:
-                plt.imshow(np.transpose(x_i.squeeze(0).numpy(), (1, 2, 0)), cmap='inferno')
+                plt.imshow(np.transpose(x_i.squeeze(
+                    0).numpy(), (1, 2, 0)), cmap='inferno')
                 plt.legend(f'Step №{i}', loc='lower left')
-                camera.snap() 
+                camera.snap()
         if plot:
             anim = camera.animate(interval=150, blit=True)
             anim.save(name + '.gif', writer='imagemagick')
 
+
 def get_schedules(beta1: float, beta2: float, num_timesteps: int) -> Dict[str, torch.Tensor]:
     assert beta1 < beta2 < 1.0, "beta1 and beta2 must be in (0, 1)"
 
-    betas = (beta2 - beta1) * torch.arange(0, num_timesteps + 1, dtype=torch.float32) / num_timesteps + beta1
+    betas = (beta2 - beta1) * torch.arange(0, num_timesteps +
+                                           1, dtype=torch.float32) / num_timesteps + beta1
     sqrt_betas = torch.sqrt(betas)
     alphas = 1 - betas
 
