@@ -77,7 +77,7 @@ def sample_energy(model, val_data, num_batches):
         energy, samples = torch.squeeze(log1p_inverse_transform(
             energy)), torch.squeeze(log1p_inverse_transform(samples))
         energy, samples, point, momentum = map(
-            lambda x: x.detach().numpy(), (energy, samples, point, momentum))
+            lambda x: x.detach().cpu().numpy(), (energy, samples, point, momentum))
         extra_embeds_sampled = get_physical_stats(samples, momentum, point)
         extra_embeds_real = get_physical_stats(energy, momentum, point)
 
