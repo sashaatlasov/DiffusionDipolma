@@ -48,9 +48,9 @@ def plot_bins_prd(prds):
 def plot_stat_distribution(real, sampled, name, range=None):
     fig = plt.figure(dpi=150)
     plt.hist(real, alpha=0.6, bins=50, density=True, color='orange',
-             edgecolor='black', label='Geant')
+             edgecolor='black', label='Geant', range=range)
     plt.hist(sampled, alpha=0.6, bins=50, density=True, color='steelblue',
-             edgecolor='black', label='Diffusion')
+             edgecolor='black', label='Diffusion', range=range)
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
