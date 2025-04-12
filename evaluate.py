@@ -44,6 +44,18 @@ def plot_bins_prd(prds):
     plt.show()
     return fig
 
+def kl_div(true_probs, fake_probs):
+    """
+    true_probs, fake_probs must be of the same size.
+    They are assumed to be probabilities of some discrete random variables
+    return KL(true || fake)
+    """
+    calc_indices = true_probs != 0
+    if (fake_probs[calc_indices] == 0.).any():
+        return np.inf
+    else:
+        return (true_probs[calc_indices] * np.log(true_probs[calc_indices] / fake_probs[calc_indices])).mean()
+
 
 def plot_stat_distribution(real, sampled, name, range=None):
     fig = plt.figure(dpi=150)
@@ -51,6 +63,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
              edgecolor='black', label='Geant', range=range)
     plt.hist(sampled, alpha=0.6, bins=50, density=True, color='steelblue',
              edgecolor='black', label='Diffusion', range=range)
+    plt.plot([], [], ' ', label=f'KL: {kl_div(real, sampled):.2f}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
