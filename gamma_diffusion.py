@@ -44,7 +44,6 @@ class GammaDiffusionModel(nn.Module):
 
     def sample(self, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
 
-        size = (1, 30, 30)
         num_samples = m.shape[0]
         device = m.device
 
