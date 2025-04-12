@@ -42,8 +42,9 @@ class GammaDiffusionModel(nn.Module):
 
         return self.criterion(centered_eps / self.sqrt_one_minus_alpha_prod[timestep, None, None, None], self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
-    def sample(self, m: torch.Tensor, p: torch.Tensor, size: Tuple[int]) -> torch.Tensor:
+    def sample(self, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
 
+        size = (1, 30, 30)
         num_samples = m.shape[0]
         device = m.device
 
