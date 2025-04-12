@@ -3,17 +3,19 @@ import torch
 import torch.nn as nn
 from typing import Dict, Tuple
 
+from unet_small import UnetModel
+
 
 class GammaDiffusionModel(nn.Module):
     def __init__(
         self,
-        eps_model: nn.Module,
-        betas: Tuple[float, float],
-        theta0: float,
-        num_timesteps: int
+        num_timesteps: int,
+        hidden_size: int,
+        theta0: float = 1e-3,
+        betas: Tuple[float, float] = (1e-4, 0.2)
     ):
         super().__init__()
-        self.eps_model = eps_model
+        self.eps_model = UnetModel(1, 1, hidden_size)
 
         for name, schedule in get_schedules(betas[0], betas[1], theta0, num_timesteps).items():
             self.register_buffer(name, schedule)

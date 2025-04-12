@@ -3,17 +3,21 @@ import wandb
 
 from utils import *
 from diffusion import DiffusionModel
+from gamma_diffusion import GammaDiffusionModel
 from data import get_dataloaders
 from evaluate import calc_metrics
 
 
-def run_experiment(config, datapath, savepath, checkpoint=None):
+def run_experiment(config, datapath, savepath, gamma=False, checkpoint=None):
 
     wandb.init(project="Diploma", config=config, name='classic diffusion')
 
-    model = DiffusionModel(config['timesteps'], config['hidden_size'])
+    if gamma:
+        model = GammaDiffusionModel(config['timesteps'], config['hidden_size'])
+    else:
+        model = DiffusionModel(config['timesteps'], config['hidden_size'])
+        
     model = model.to(DEVICE)
-
     wandb.log({"trainable_params": calc_params(model)}, step=0)
 
     if checkpoint:
