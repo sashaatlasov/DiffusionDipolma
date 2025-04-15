@@ -3,5 +3,6 @@ config = dict(
     learning_rate=1e-3,
     epochs=100,
     timesteps=20,
-    hidden_size=16
+    hidden_size=16,
+    theta0 = 1e-3
 )

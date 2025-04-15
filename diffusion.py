@@ -63,6 +63,28 @@ class DiffusionModel(nn.Module):
                 x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
 
         return x_i
+    
+    def implicit_sample(self, m: torch.Tensor, p: torch.Tensor, fast_sampling: int, eta: float):
+        
+        size = (1, 30, 30)
+        num_samples = m.shape[0]
+        device = m.device
+
+        x_i = torch.randn(num_samples, *size, device=device)
+        steps = self.num_timesteps * torch.rand(fast_sampling, device=device)
+        steps = torch.round(steps).sort(descending=True).values.int()
+        c = torch.round(self.num_timesteps - steps[0])
+
+        for i in tqdm(c + steps, leave=False):
+            sigma = eta * torch.sqrt((1 - self.alphas[i]) / self.alphas[i - 1])
+            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
+            eps = self.eps_model(x_i, m, p, torch.tensor(
+                i / self.num_timesteps).repeat(num_samples, 1).to(device))
+            x_i = torch.sqrt(self.alphas[i - 1]) * self.inv_sqrt_alphas[i] * (
+                x_i - eps * torch.sqrt(1 - self.alphas[i])) + torch.sqrt(1 - self.alphas[i - 1] - sigma ** 2) * eps + sigma * z
+        
+        return x_i
+
 
     def sample_single(self, m: torch.Tensor, p: torch.Tensor, plot=False, name='animation') -> torch.Tensor:
         device = m.device

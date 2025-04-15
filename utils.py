@@ -5,6 +5,8 @@ def get_local_device() -> torch.device:
     return torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
 DEVICE = get_local_device()
+NAMES = ['Longitudual Cluster Asymmetry', 'Transverse Cluster Asymmetry',
+             'Cluster Longitudual Width', 'Cluster Transverse Width']
 
 def calc_grad_norm(model):
     total_norm = 0

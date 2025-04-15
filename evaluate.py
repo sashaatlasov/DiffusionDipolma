@@ -7,7 +7,7 @@ from metrics.calogan_metrics import get_physical_stats
 from metrics.calogan_prd import plot_pr_aucs, calc_pr_rec_from_embeds, get_energy_embedding
 from metrics.metrics import ConditionBinsMetric, AveragePRDAUCMetric
 from data import log1p_inverse_transform
-from utils import DEVICE
+from utils import DEVICE, NAMES
 
 
 def plot_bins_prd(prds):
@@ -58,12 +58,12 @@ def kl_div(true_probs, fake_probs):
 
 
 def plot_stat_distribution(real, sampled, name, range=None):
-    fig = plt.figure(dpi=150)
-    plt.hist(real, alpha=0.6, bins=50, density=True, color='orange',
+    fig = plt.figure(dpi=300)
+    hist1 = plt.hist(real, alpha=0.5, bins=50, density=True, color='orange',
              edgecolor='black', label='Geant', range=range)
-    plt.hist(sampled, alpha=0.6, bins=50, density=True, color='steelblue',
+    hist2 = plt.hist(sampled, alpha=0.5, bins=50, density=True, color='steelblue',
              edgecolor='black', label='Diffusion', range=range)
-    plt.plot([], [], ' ', label=f'KL: {kl_div(real, sampled):.2f}')
+    plt.plot([], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.2f}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
@@ -116,8 +116,6 @@ def sample_energy(model, val_data, num_batches):
 
 
 def calc_metrics(model, val_data, num_batches=None):
-    names = ['Longitudual Cluster Asymmetry', 'Transverse Cluster Asymmetry',
-             'Cluster Longitudual Width', 'Cluster Transverse Width']
     ranges = [None, None, (0, 15), (0, 7)]
 
     if num_batches is None:
@@ -125,9 +123,11 @@ def calc_metrics(model, val_data, num_batches=None):
 
     val_data, gen_data = sample_energy(model, val_data, num_batches)
 
-    for i in range(len(names)):
-        plot_stat_distribution(
-            val_data[1][:, i], gen_data[1][:, i], names[i], range=ranges[i])
+    stat_dists = []
+    for i in range(len(NAMES)):
+        fig = plot_stat_distribution(
+            val_data[1][:, i], gen_data[1][:, i], NAMES[i], range=ranges[i])
+        stat_dists.append(fig)
 
     prec, rec = calc_pr_rec_from_embeds(val_data[0], gen_data[0])
     result, fig1 = plot_pr_aucs(prec, rec)
@@ -137,18 +137,18 @@ def calc_metrics(model, val_data, num_batches=None):
     result, fig2 = plot_pr_aucs(prec, rec)
     prd_phys = np.mean(result)
 
-    # calculated_metric = AveragePRDAUCMetric(num_clusters=20, num_runs=10,
-    #                                         enforce_balance=True)
-    # metric = ConditionBinsMetric(
-    #         calculated_metric,
-    #         dim_bins=torch.Tensor([3, 3]),
-    #         condition_index=0
-    #     )
-    # val_cond = val_data[1][0].detach().cpu()
-    # gen_cond = gen_data[1][0].detach().cpu()
+    calculated_metric = AveragePRDAUCMetric(num_clusters=20, num_runs=10,
+                                            enforce_balance=True)
+    metric = ConditionBinsMetric(
+            calculated_metric,
+            dim_bins=torch.Tensor([3, 3]),
+            condition_index=0
+        )
+    val_cond = val_data[2][0]
+    gen_cond = gen_data[2][0]
 
-    # result = metric.evaluate((val_data[0], val_cond), (gen_data[0], gen_cond))
-    # cond_prd = np.mean(result)
-    # fig2 = plot_bins_prd(result)
+    result = metric.evaluate((val_data[0], val_cond), (gen_data[0], gen_cond))
+    cond_prd = np.mean(result)
+    fig3 = plot_bins_prd(result)
 
-    return total_prd, prd_phys, fig1, fig2
+    return (total_prd, prd_phys, cond_prd), (fig1, fig2, fig3), stat_dists
