@@ -63,7 +63,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
              edgecolor='black', label='Geant', range=range)
     hist2 = plt.hist(sampled, alpha=0.5, bins=50, density=True, color='steelblue',
              edgecolor='black', label='Diffusion', range=range)
-    plt.plot([], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.2f}')
+    plt.plot([], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.4f}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
@@ -144,8 +144,8 @@ def calc_metrics(model, val_data, num_batches=None):
             dim_bins=torch.Tensor([3, 3]),
             condition_index=0
         )
-    val_cond = val_data[2][0]
-    gen_cond = gen_data[2][0]
+    val_cond = torch.tensor(val_data[2][0])
+    gen_cond = torch.tensor(gen_data[2][0])
 
     result = metric.evaluate((val_data[0], val_cond), (gen_data[0], gen_cond))
     cond_prd = np.mean(result)
