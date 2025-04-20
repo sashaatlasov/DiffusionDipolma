@@ -67,9 +67,9 @@ def calculate_fid(real, gen):
 
 def plot_stat_distribution(real, sampled, name, range=None):
     fig = plt.figure(dpi=300)
-    hist1 = plt.hist(real, alpha=0.5, bins=100, density=True, color='orange',
+    hist1 = plt.hist(real, alpha=0.5, bins=50, density=True, color='orange',
                      edgecolor='black', label='Geant', range=range)
-    hist2 = plt.hist(sampled, alpha=0.5, bins=100, density=True, color='steelblue',
+    hist2 = plt.hist(sampled, alpha=0.5, bins=50, density=True, color='steelblue',
                      edgecolor='black', label='Diffusion', range=range)
     plt.plot(
         [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.4f}')
