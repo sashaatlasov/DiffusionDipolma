@@ -2,6 +2,7 @@ import torch
 from tqdm.auto import tqdm
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.linalg import sqrtm
 
 from metrics.calogan_metrics import get_physical_stats
 from metrics.calogan_prd import plot_pr_aucs, calc_pr_rec_from_embeds, get_energy_embedding
@@ -17,7 +18,7 @@ def plot_bins_prd(prds):
     x_bounds = np.linspace(*x_lims, num=dims_bins_cnt[0]+1)
     y_bounds = np.linspace(*y_lims, num=dims_bins_cnt[1]+1)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(dpi=300)
 
     ax.axis('equal')
     ax.set_xlim(x_bounds[0], x_bounds[-1])
@@ -44,12 +45,8 @@ def plot_bins_prd(prds):
     plt.show()
     return fig
 
+
 def kl_div(true_probs, fake_probs):
-    """
-    true_probs, fake_probs must be of the same size.
-    They are assumed to be probabilities of some discrete random variables
-    return KL(true || fake)
-    """
     calc_indices = true_probs != 0
     if (fake_probs[calc_indices] == 0.).any():
         return np.inf
@@ -57,13 +54,25 @@ def kl_div(true_probs, fake_probs):
         return (true_probs[calc_indices] * np.log(true_probs[calc_indices] / fake_probs[calc_indices])).mean()
 
 
+def calculate_fid(real, gen):
+    mean1 = np.mean(real, axis=0)
+    mean2 = np.mean(gen, axis=0)
+
+    cov1 = np.cov(real, rowvar=False)
+    cov2 = np.cov(gen, rowvar=False)
+
+    sqrt_matrix = sqrtm(cov1 @ cov2).real
+    return np.sum((mean1 - mean2) ** 2) + np.trace(cov1 + cov2 - 2 * sqrt_matrix)
+
+
 def plot_stat_distribution(real, sampled, name, range=None):
     fig = plt.figure(dpi=300)
-    hist1 = plt.hist(real, alpha=0.5, bins=50, density=True, color='orange',
-             edgecolor='black', label='Geant', range=range)
-    hist2 = plt.hist(sampled, alpha=0.5, bins=50, density=True, color='steelblue',
-             edgecolor='black', label='Diffusion', range=range)
-    plt.plot([], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.4f}')
+    hist1 = plt.hist(real, alpha=0.5, bins=100, density=True, color='orange',
+                     edgecolor='black', label='Geant', range=range)
+    hist2 = plt.hist(sampled, alpha=0.5, bins=100, density=True, color='steelblue',
+                     edgecolor='black', label='Diffusion', range=range)
+    plt.plot(
+        [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.4f}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
@@ -140,10 +149,10 @@ def calc_metrics(model, val_data, num_batches=None):
     calculated_metric = AveragePRDAUCMetric(num_clusters=20, num_runs=10,
                                             enforce_balance=True)
     metric = ConditionBinsMetric(
-            calculated_metric,
-            dim_bins=torch.Tensor([3, 3]),
-            condition_index=0
-        )
+        calculated_metric,
+        dim_bins=torch.Tensor([3, 3]),
+        condition_index=0
+    )
     val_cond = torch.tensor(val_data[2][0])
     gen_cond = torch.tensor(gen_data[2][0])
 
@@ -151,4 +160,11 @@ def calc_metrics(model, val_data, num_batches=None):
     cond_prd = np.mean(result)
     fig3 = plot_bins_prd(result)
 
-    return (total_prd, prd_phys, cond_prd), (fig1, fig2, fig3), stat_dists
+    result = metric.evaluate((val_data[1], val_cond), (gen_data[1], gen_cond))
+    cond_prd_phys = np.mean(result)
+    fig4 = plot_bins_prd(result)
+
+    efid = calculate_fid(val_data[0], gen_data[0])
+    pfid = calculate_fid(val_data[1], gen_data[1])
+
+    return (total_prd, prd_phys, cond_prd, cond_prd_phys, efid, pfid), (fig1, fig2, fig3, fig4), stat_dists

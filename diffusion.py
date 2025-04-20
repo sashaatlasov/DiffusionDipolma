@@ -71,17 +71,18 @@ class DiffusionModel(nn.Module):
         device = m.device
 
         x_i = torch.randn(num_samples, *size, device=device)
-        steps = self.num_timesteps * torch.rand(fast_sampling, device=device)
-        steps = torch.round(steps).sort(descending=True).values.int()
-        c = torch.round(self.num_timesteps - steps[0])
+        #steps = self.num_timesteps * torch.rand(fast_sampling, device=device)
+        #steps = torch.round(steps).sort(descending=True).values.int()
+        steps = torch.arange(0, self.num_timesteps, step=self.num_timesteps // fast_sampling)
 
-        for i in tqdm(c + steps, leave=False):
-            sigma = eta * torch.sqrt((1 - self.alphas[i]) / self.alphas[i - 1])
-            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
+        for i in tqdm(range(1, len(steps)), leave=False):
+            current, prev = steps[i], steps[i - 1]
+            sigma = eta * torch.sqrt((1 - self.alphas_cumprod[prev]) * (1 - self.alphas[prev]) / self.alphas_cumprod[current])
+            z = torch.randn(num_samples, *size, device=device) if current > 1 else 0
             eps = self.eps_model(x_i, m, p, torch.tensor(
                 i / self.num_timesteps).repeat(num_samples, 1).to(device))
-            x_i = torch.sqrt(self.alphas[i - 1]) * self.inv_sqrt_alphas[i] * (
-                x_i - eps * torch.sqrt(1 - self.alphas[i])) + torch.sqrt(1 - self.alphas[i - 1] - sigma ** 2) * eps + sigma * z
+            x_i = torch.sqrt(self.alphas_cumprod[current]) * (
+                x_i - eps * torch.sqrt(1 - self.alphas_cumprod[prev])) / self.alphas_cumprod[prev] *  + torch.sqrt(1 - self.alphas_cumprod[current] - sigma ** 2) * eps + sigma * z
         
         return x_i
 
