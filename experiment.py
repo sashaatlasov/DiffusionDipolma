@@ -43,7 +43,7 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
             with torch.no_grad():
                 samples = model.sample(momentum.to(DEVICE), point.to(DEVICE))
                 wandb.log({"examples": wandb.Image(samples)}, step=i)
-
+    torch.save(model.state_dict(), savepath)
     prds, prd_curves, stats = calc_metrics(model, val_dataloader)
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
               "Conditional-E-PRD": prds[2], "Conditional-P-PRD": prds[3], "E-FID": prds[4], "P-FID": prds[5]})
