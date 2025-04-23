@@ -72,7 +72,7 @@ def run_evaluation(config, datapath, checkpoint, gamma=False):
 
     prds, prd_curves, stats = calc_metrics(model, val_dataloader)
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
-              "Conditional-E-PRD": prds[2], "Conditional-P-PRD": prds[3]})
+              "Conditional-E-PRD": prds[2], "Conditional-P-PRD": prds[3], "E-FID": prds[4], "P-FID": prds[5]})
     for i, name in enumerate(["E", "P", "Cond-E", "Cond-P"]):
         wandb.log({name + "-curve": wandb.Image(prd_curves[i])})
     for i, name in enumerate(NAMES):
