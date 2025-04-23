@@ -94,7 +94,7 @@ def sample_energy(model, val_data, num_batches, t):
         with torch.no_grad():
             samples = model.sample(momentum, point)
             if t:
-                samples[samples < np.log1p(5e-3)] = 0
+                samples[samples < np.log1p(t)] = 0
             sampled_embeds = get_energy_embedding(samples)
             real_embeds = get_energy_embedding(energy)
 
