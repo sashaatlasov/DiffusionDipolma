@@ -54,7 +54,7 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
     run.finish()
 
 
-def run_evaluation(config, datapath, checkpoint, gamma=False):
+def run_evaluation(config, datapath, checkpoint, t=None, gamma=False):
     _, val_dataloader = get_dataloaders(datapath, config['batch_size'])
 
     run = wandb.init(project="Metrics", config=config,
@@ -70,7 +70,7 @@ def run_evaluation(config, datapath, checkpoint, gamma=False):
     wandb.log({"trainable_params": calc_params(model)}, step=0)
     model.load_state_dict(torch.load(checkpoint, map_location=DEVICE))
 
-    prds, prd_curves, stats = calc_metrics(model, val_dataloader)
+    prds, prd_curves, stats = calc_metrics(model, val_dataloader, t=t)
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
               "Conditional-E-PRD": prds[2], "Conditional-P-PRD": prds[3], "E-FID": prds[4], "P-FID": prds[5]})
     for i, name in enumerate(["E", "P", "Cond-E", "Cond-P"]):

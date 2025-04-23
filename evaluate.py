@@ -80,7 +80,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
     return fig
 
 
-def sample_energy(model, val_data, num_batches):
+def sample_energy(model, val_data, num_batches, t):
     model.eval()
     all_sampled_embeds, all_real_embeds, all_point, all_momentum = [], [], [], []
     all_extra_embeds_real, all_extra_embeds_sampled = [], []
@@ -93,6 +93,8 @@ def sample_energy(model, val_data, num_batches):
             lambda x: x.to(DEVICE), (energy, point, momentum))
         with torch.no_grad():
             samples = model.sample(momentum, point)
+            if t:
+                samples[samples < np.log1p(5e-3)] = 0
             sampled_embeds = get_energy_embedding(samples)
             real_embeds = get_energy_embedding(energy)
 
@@ -124,13 +126,13 @@ def sample_energy(model, val_data, num_batches):
     )
 
 
-def calc_metrics(model, val_data, num_batches=None):
+def calc_metrics(model, val_data, num_batches=None, t=None):
     ranges = [None, None, (0, 15), (0, 7)]
 
     if num_batches is None:
         num_batches = len(val_data)
 
-    val_data, gen_data = sample_energy(model, val_data, num_batches)
+    val_data, gen_data = sample_energy(model, val_data, num_batches, t=t)
 
     stat_dists = []
     for i in range(len(NAMES)):
