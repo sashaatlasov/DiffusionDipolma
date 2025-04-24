@@ -52,9 +52,7 @@ class DiffusionModel(nn.Module):
             self.sqrt_alphas_cumprod[timestep, None, None, None] * x
             + self.sqrt_one_minus_alpha_prod[timestep, None, None, None] * eps
         )
-        x_hat = self.eps_model(x_t, m, p, timestep / self.num_timesteps)
-        x_hat = torch.maximum(x, torch.tensor(np.log1p(5e-3), dtype=x.dtype, device=x.device))
-        return self.criterion(eps, x_hat)
+        return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
     def sample(self, m: torch.Tensor, p: torch.Tensor, truncate: float = None) -> torch.Tensor:
 
