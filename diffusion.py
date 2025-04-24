@@ -9,6 +9,14 @@ import numpy as np
 
 from unet_small import UnetModel
 
+class MaxWithValue(nn.Module):
+    def __init__(self, min_value):
+        super(MaxWithValue, self).__init__()
+        self.min_value = min_value
+
+    def forward(self, x):
+        return torch.maximum(x, torch.tensor(self.min_value, dtype=x.dtype, device=x.device))
+
 
 class DiffusionModel(nn.Module):
     def __init__(
@@ -44,8 +52,9 @@ class DiffusionModel(nn.Module):
             self.sqrt_alphas_cumprod[timestep, None, None, None] * x
             + self.sqrt_one_minus_alpha_prod[timestep, None, None, None] * eps
         )
-
-        return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
+        x_hat = self.eps_model(x_t, m, p, timestep / self.num_timesteps)
+        x_hat = torch.maximum(x, torch.tensor(np.log1p(5e-3), dtype=x.dtype, device=x.device))
+        return self.criterion(eps, x_hat)
 
     def sample(self, m: torch.Tensor, p: torch.Tensor, truncate: float = None) -> torch.Tensor:
 
