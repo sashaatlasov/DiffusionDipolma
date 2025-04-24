@@ -54,7 +54,7 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
     run.finish()
 
 
-def run_evaluation(config, datapath, checkpoint, t=None, gamma=False):
+def run_evaluation(config, datapath, checkpoint, gamma=False):
     _, val_dataloader = get_dataloaders(datapath, config['batch_size'])
 
     run = wandb.init(project="Metrics", config=config,

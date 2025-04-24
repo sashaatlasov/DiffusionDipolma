@@ -47,7 +47,7 @@ class DiffusionModel(nn.Module):
 
         return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
-    def sample(self, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
+    def sample(self, m: torch.Tensor, p: torch.Tensor, truncate: float = None) -> torch.Tensor:
 
         size = (1, 30, 30)
         num_samples = m.shape[0]
@@ -61,7 +61,10 @@ class DiffusionModel(nn.Module):
                 i / self.num_timesteps).repeat(num_samples, 1).to(device))
             x_i = self.inv_sqrt_alphas[i] * (
                 x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
-
+        
+        if truncate:
+            x_i[x_i < torch.log1p(truncate)] = 0
+            
         return x_i
     
     def implicit_sample(self, m: torch.Tensor, p: torch.Tensor, fast_sampling: int, eta: float):

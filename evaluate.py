@@ -72,7 +72,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
     hist2 = plt.hist(sampled, alpha=0.5, bins=50, density=True, color='steelblue',
                      edgecolor='black', label='Diffusion', range=range)
     plt.plot(
-        [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.4f}')
+        [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled))}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
@@ -92,9 +92,7 @@ def sample_energy(model, val_data, num_batches, t):
         energy, point, momentum = map(
             lambda x: x.to(DEVICE), (energy, point, momentum))
         with torch.no_grad():
-            samples = model.sample(momentum, point)
-            if t:
-                samples[samples < np.log1p(t)] = 0
+            samples = model.sample(momentum, point, truncate=t)
             sampled_embeds = get_energy_embedding(samples)
             real_embeds = get_energy_embedding(energy)
 
