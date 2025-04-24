@@ -51,7 +51,7 @@ def kl_div(true_probs, fake_probs):
     if (fake_probs[calc_indices] == 0.).any():
         return np.inf
     else:
-        return (true_probs[calc_indices] * np.log(true_probs[calc_indices] / fake_probs[calc_indices])).mean()
+        return (true_probs[calc_indices] * np.log(true_probs[calc_indices] / fake_probs[calc_indices])).sum()
 
 
 def calculate_fid(real, gen):
