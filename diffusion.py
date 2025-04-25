@@ -24,14 +24,18 @@ class DiffusionModel(nn.Module):
         num_timesteps: int,
         hidden_size: int,
         loss: str = 'l2',
+        schedule: str = 'linear',
         betas: Tuple[float, float] = (1e-4, 0.2),
     ):
         super().__init__()
         self.eps_model = UnetModel(1, 1, hidden_size)
 
-        for name, schedule in get_schedules(betas[0], betas[1], num_timesteps).items():
-            self.register_buffer(name, schedule)
-
+        if schedule == 'linear':
+            for name, schedule in get_schedules(betas[0], betas[1], num_timesteps).items():
+                self.register_buffer(name, schedule)
+        elif schedule == 'cosine':   
+            for name, schedule in get_cosine_schedules(num_timesteps).items():
+                self.register_buffer(name, schedule)
         self.num_timesteps = num_timesteps
 
         if loss == 'l2':
@@ -151,3 +155,28 @@ def get_schedules(beta1: float, beta2: float, num_timesteps: int) -> Dict[str, t
         "sqrt_one_minus_alpha_prod": sqrt_one_minus_alpha_prod,
         "one_minus_alpha_over_prod": one_minus_alpha_over_prod,
     }
+
+def timestep_to_alpha(timesteps, T):
+    return np.cos((timesteps / T + 0.008) * np.pi / ((1 + 0.008) * 2))
+
+def get_cosine_schedules(num_timesteps: int) -> Dict[str, torch.Tensor]:
+
+    alphas_cumprod = timestep_to_alpha(np.arange(0, num_timesteps))
+    betas = 1 - alphas_cumprod / alphas_cumprod[1:]
+    sqrt_betas = torch.sqrt(betas)
+    alphas = 1 - betas
+    sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
+    inv_sqrt_alphas = 1 / torch.sqrt(alphas)
+    sqrt_one_minus_alpha_prod = torch.sqrt(1 - alphas_cumprod)
+    one_minus_alpha_over_prod = (1 - alphas) / sqrt_one_minus_alpha_prod
+
+    return {
+        "alphas": alphas,
+        "inv_sqrt_alphas": inv_sqrt_alphas,
+        "sqrt_betas": sqrt_betas,
+        "alphas_cumprod": alphas_cumprod,
+        "sqrt_alphas_cumprod": sqrt_alphas_cumprod,
+        "sqrt_one_minus_alpha_prod": sqrt_one_minus_alpha_prod,
+        "one_minus_alpha_over_prod": one_minus_alpha_over_prod,
+    }
+
