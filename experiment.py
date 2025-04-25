@@ -17,7 +17,7 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
         model = GammaDiffusionModel(
             config['timesteps'], config['hidden_size'], config['theta0'])
     else:
-        model = DiffusionModel(config['timesteps'], config['hidden_size'])
+        model = DiffusionModel(config['timesteps'], config['hidden_size'], config['schedule'])
 
     model = model.to(DEVICE)
     wandb.log({"trainable_params": calc_params(model)}, step=0)

@@ -23,8 +23,8 @@ class DiffusionModel(nn.Module):
         self,
         num_timesteps: int,
         hidden_size: int,
-        loss: str = 'l2',
         schedule: str = 'linear',
+        loss: str = 'l2',
         betas: Tuple[float, float] = (1e-4, 0.2),
     ):
         super().__init__()
