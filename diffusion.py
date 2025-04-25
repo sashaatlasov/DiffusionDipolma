@@ -34,7 +34,7 @@ class DiffusionModel(nn.Module):
             for name, schedule in get_schedules(betas[0], betas[1], num_timesteps).items():
                 self.register_buffer(name, schedule)
         elif schedule == 'cosine':   
-            for name, schedule in get_cosine_schedules(num_timesteps).items():
+            for name, schedule in get_cosine_schedules(num_timesteps + 1).items():
                 self.register_buffer(name, schedule)
         self.num_timesteps = num_timesteps
 
@@ -49,7 +49,7 @@ class DiffusionModel(nn.Module):
         device = x.device
 
         timestep = torch.randint(
-            1, self.num_timesteps, (x.shape[0],), device=device)
+            1, self.num_timesteps + 1, (x.shape[0],), device=device)
         eps = torch.randn_like(x, device=device)
 
         x_t = (
