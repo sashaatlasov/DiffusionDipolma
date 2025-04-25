@@ -162,7 +162,7 @@ def timestep_to_alpha(timesteps, T):
 def get_cosine_schedules(num_timesteps: int) -> Dict[str, torch.Tensor]:
 
     alphas_cumprod = timestep_to_alpha(np.arange(0, num_timesteps + 1), num_timesteps + 1)
-    betas = 1 - alphas_cumprod / alphas_cumprod[1:]
+    betas = 1 - alphas_cumprod[1:] / alphas_cumprod[:-1]
     sqrt_betas = torch.sqrt(betas)
     alphas = 1 - betas
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
