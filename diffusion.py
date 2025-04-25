@@ -49,7 +49,7 @@ class DiffusionModel(nn.Module):
         device = x.device
 
         timestep = torch.randint(
-            1, self.num_timesteps + 1, (x.shape[0],), device=device)
+            1, self.num_timesteps, (x.shape[0],), device=device)
         eps = torch.randn_like(x, device=device)
 
         x_t = (
@@ -77,29 +77,6 @@ class DiffusionModel(nn.Module):
             x_i[x_i < np.log1p(truncate)] = 0
 
         return x_i
-    
-    def implicit_sample(self, m: torch.Tensor, p: torch.Tensor, fast_sampling: int, eta: float):
-        
-        size = (1, 30, 30)
-        num_samples = m.shape[0]
-        device = m.device
-
-        x_i = torch.randn(num_samples, *size, device=device)
-        #steps = self.num_timesteps * torch.rand(fast_sampling, device=device)
-        #steps = torch.round(steps).sort(descending=True).values.int()
-        steps = torch.arange(0, self.num_timesteps, step=self.num_timesteps // fast_sampling)
-
-        for i in tqdm(range(1, len(steps)), leave=False):
-            current, prev = steps[i], steps[i - 1]
-            sigma = eta * torch.sqrt((1 - self.alphas_cumprod[prev]) * (1 - self.alphas[prev]) / self.alphas_cumprod[current])
-            z = torch.randn(num_samples, *size, device=device) if current > 1 else 0
-            eps = self.eps_model(x_i, m, p, torch.tensor(
-                i / self.num_timesteps).repeat(num_samples, 1).to(device))
-            x_i = torch.sqrt(self.alphas_cumprod[current]) * (
-                x_i - eps * torch.sqrt(1 - self.alphas_cumprod[prev])) / self.alphas_cumprod[prev] *  + torch.sqrt(1 - self.alphas_cumprod[current] - sigma ** 2) * eps + sigma * z
-        
-        return x_i
-
 
     def sample_single(self, m: torch.Tensor, p: torch.Tensor, plot=False, name='animation') -> torch.Tensor:
         device = m.device
