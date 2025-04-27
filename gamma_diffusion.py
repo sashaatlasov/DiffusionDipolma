@@ -23,7 +23,7 @@ class GammaDiffusionModel(nn.Module):
         self.num_timesteps = num_timesteps
         self.criterion = nn.L1Loss()
 
-    def sample_gamma(self, timestep: torch.Tensor, device: str = 'cpu', 
+    def sample_gamma(self, timestep: torch.Tensor, device: str = 'cpu',
                      shape: Tuple[int] = (1, 30, 30)) -> Tuple[torch.Tensor]:
         k, theta = self.k_t_bar[timestep], self.theta_t[timestep]
         gamma = torch.distributions.Gamma(k, 1 / theta)
@@ -34,11 +34,13 @@ class GammaDiffusionModel(nn.Module):
 
         device = x.device
 
-        timestep = torch.randint(1, self.num_timesteps + 1, (x.shape[0],), device=device)
+        timestep = torch.randint(
+            1, self.num_timesteps + 1, (x.shape[0],), device=device)
 
         _, centered_eps = self.sample_gamma(timestep, device)
 
-        x_t = self.sqrt_alphas_cumprod[timestep, None, None, None] * x + centered_eps
+        x_t = self.sqrt_alphas_cumprod[timestep,
+                                       None, None, None] * x + centered_eps
 
         return self.criterion(centered_eps / self.sqrt_one_minus_alpha_prod[timestep, None, None, None], self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
@@ -57,8 +59,10 @@ class GammaDiffusionModel(nn.Module):
             else:
                 z = 0
             i = i[0]
-            eps = self.eps_model(x_i, m, p, torch.tensor(i / self.num_timesteps).repeat(num_samples, 1).to(device))
-            x_i = self.inv_sqrt_alphas[i] * (x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
+            eps = self.eps_model(x_i, m, p, torch.tensor(
+                i / self.num_timesteps).repeat(num_samples, 1).to(device))
+            x_i = self.inv_sqrt_alphas[i] * (
+                x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
 
         return x_i
 
@@ -67,7 +71,8 @@ def get_schedules(beta1: float, beta2: float, theta: float, num_timesteps: int) 
 
     assert beta1 < beta2 < 1.0, "beta1 and beta2 must be in (0, 1)"
 
-    betas = (beta2 - beta1) * torch.arange(0, num_timesteps + 1, dtype=torch.float32) / num_timesteps + beta1
+    betas = (beta2 - beta1) * torch.arange(0, num_timesteps +
+                                           1, dtype=torch.float32) / num_timesteps + beta1
     sqrt_betas = torch.sqrt(betas)
     alphas = 1 - betas
 
@@ -84,7 +89,7 @@ def get_schedules(beta1: float, beta2: float, theta: float, num_timesteps: int) 
     one_minus_alpha_over_prod = (1 - alphas) / sqrt_one_minus_alpha_prod
 
     return {
-        "betas": betas, 
+        "betas": betas,
         "alphas": alphas,
         "inv_sqrt_alphas": inv_sqrt_alphas,
         "sqrt_betas": sqrt_betas,

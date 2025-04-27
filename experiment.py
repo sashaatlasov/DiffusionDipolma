@@ -17,7 +17,8 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
         model = GammaDiffusionModel(
             config['timesteps'], config['hidden_size'], config['theta0'])
     else:
-        model = DiffusionModel(config['timesteps'], config['hidden_size'], config['schedule'])
+        model = DiffusionModel(
+            config['timesteps'], config['hidden_size'], config['schedule'])
 
     model = model.to(DEVICE)
     wandb.log({"trainable_params": calc_params(model)}, step=0)
@@ -44,7 +45,9 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
                 samples = model.sample(momentum.to(DEVICE), point.to(DEVICE))
                 wandb.log({"examples": wandb.Image(samples)}, step=i)
     torch.save(model.state_dict(), savepath)
-    prds, prd_curves, stats = calc_metrics(model, val_dataloader)
+
+    prds, prd_curves, stats = calc_metrics(
+        model, val_dataloader, t=config['threshold'])
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
               "Conditional-E-PRD": prds[2], "Conditional-P-PRD": prds[3], "E-FID": prds[4], "P-FID": prds[5]})
     for i, name in enumerate(["E", "P", "Cond-E", "Cond-P"]):
@@ -70,7 +73,8 @@ def run_evaluation(config, datapath, checkpoint, gamma=False):
     wandb.log({"trainable_params": calc_params(model)}, step=0)
     model.load_state_dict(torch.load(checkpoint, map_location=DEVICE))
 
-    prds, prd_curves, stats = calc_metrics(model, val_dataloader, t=config['threshold'])
+    prds, prd_curves, stats = calc_metrics(
+        model, val_dataloader, t=config['threshold'])
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
               "Conditional-E-PRD": prds[2], "Conditional-P-PRD": prds[3], "E-FID": prds[4], "P-FID": prds[5]})
     for i, name in enumerate(["E", "P", "Cond-E", "Cond-P"]):
