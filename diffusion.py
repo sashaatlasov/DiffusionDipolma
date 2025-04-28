@@ -11,7 +11,8 @@ import numpy as np
 from unet_small import UnetModel
 
 
-def total_loss_fn(predicted, target, l_sparsity=0.01, l_energy=0.001):
+def total_loss_fn(predicted, target, l_sparsity=0.05, l_energy=0.01, l_outer=0.01, 
+                  center_x=15, center_y=15, r_cutoff=15):
     """
     predicted: model output, shape [batch, channels, height, width]
     target: ground truth energy deposit
@@ -19,21 +20,28 @@ def total_loss_fn(predicted, target, l_sparsity=0.01, l_energy=0.001):
     """
     diffusion_loss = F.mse_loss(predicted, target)
 
-    sparsity_loss = torch.mean(predicted[predicted < np.log1p(1e-3)])  # only punish small random activations
-
-    # --- Outer-region penalty ---
-    batch_size, _, height, width = predicted.shape
+    sparsity_loss = torch.mean(predicted[predicted < np.log1p(5e-3)])  
+    
+    _, _, height, width = predicted.shape
     device = predicted.device
 
-    # --- Energy conservation loss ---
-    predicted_total = predicted.sum(dim=[1,2,3])  # sum over (C,H,W)
+    y_coords, x_coords = torch.meshgrid(
+        torch.arange(height, device=device), 
+        torch.arange(width, device=device), indexing="ij"
+    )
+    distance_from_center = torch.sqrt((x_coords - center_x)**2 + (y_coords - center_y)**2)
+    outer_mask = (distance_from_center > r_cutoff).float()
+
+    outer_energy = (predicted.squeeze(1) * outer_mask).mean()
+
+    predicted_total = predicted.sum(dim=[1,2,3])
     target_total = target.sum(dim=[1,2,3])
     energy_loss = F.l1_loss(predicted_total, target_total)
 
-    # --- Combine everything ---
     total_loss = (diffusion_loss
                   + l_sparsity * sparsity_loss
-                  + l_energy * energy_loss)
+                  + l_energy * energy_loss
+                  + l_outer * outer_energy)
 
     return total_loss
 
@@ -88,8 +96,7 @@ class DiffusionModel(nn.Module):
         device = m.device
 
         x_i = torch.randn(num_samples, *size, device=device)
-
-        for i in tqdm(range(self.num_timesteps, 0, -1), leave=False):
+        for i in tqdm(range(self.num_timesteps - 1, 0, -1), leave=False):
             z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
             eps = self.eps_model(x_i, m, p, torch.tensor(
                 i / self.num_timesteps).repeat(num_samples, 1).to(device))
