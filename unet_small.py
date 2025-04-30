@@ -134,7 +134,7 @@ class UnetModel(nn.Module):
         cemb = self.cond_embedding(cond)[:, :, None, None]
 
         thro = self.up0(thro + temb + cemb)
-        print(down3.shape, thro.shape)
+        
         up1 = self.up1(thro, down3) 
         up2 = self.up2(up1, down2) 
         up3 = self.up3(up2, down1) 
