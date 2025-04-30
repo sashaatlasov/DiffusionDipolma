@@ -11,8 +11,8 @@ import numpy as np
 from unet_small import UnetModel
 
 
-def total_loss_fn(predicted, target, l_sparsity=0.05, l_energy=0.05, l_outer=0.01, 
-                  center_x=15, center_y=15, r_cutoff=15):
+def total_loss_fn(predicted, target, l_sparsity=0.01, l_energy=0.05, l_outer=0.05, 
+                  center_x=15, center_y=15, r_cutoff=10):
     """
     predicted: model output, shape [batch, channels, height, width]
     target: ground truth energy deposit
