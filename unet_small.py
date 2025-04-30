@@ -146,4 +146,4 @@ class UnetModel(nn.Module):
 
         out = self.out(torch.cat((up3, x), 1))
 
-        return torch.relu(out * self.final_filter(out))
+        return out * self.final_filter(out)
