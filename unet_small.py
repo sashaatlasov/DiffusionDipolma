@@ -114,6 +114,9 @@ class UnetModel(nn.Module):
         self.up3 = UpBlock(2 * hidden_size, hidden_size, 2, 2)
         self.out = nn.Conv2d(2 * hidden_size, self.out_channels, 3, 1, 1)
 
+        self.final_filter = nn.Sequential(nn.Conv2d(out_channels, out_channels, 1),
+                                          nn.Sigmoid())
+
     def forward(self, x: torch.Tensor, m: torch.Tensor, 
                 p: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         x = self.init_conv(x)
@@ -135,4 +138,4 @@ class UnetModel(nn.Module):
 
         out = self.out(torch.cat((up3, x), 1))
 
-        return torch.relu(out)
+        return torch.relu(out * self.final_filter(out))
