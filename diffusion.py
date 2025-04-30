@@ -84,10 +84,10 @@ class DiffusionModel(nn.Module):
             self.sqrt_alphas_cumprod[timestep, None, None, None] * x
             + self.sqrt_one_minus_alpha_prod[timestep, None, None, None] * eps
         )
-        predicted = self.eps_model(x_t, m, p, timestep / self.num_timesteps)
-        predicted_clean = (x_t - self.sqrt_one_minus_alpha_prod[timestep, None, None, None] * predicted) / self.sqrt_alphas_cumprod[timestep, None, None, None]
-        # return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
-        return total_loss_fn(predicted_clean, x)
+        #predicted = self.eps_model(x_t, m, p, timestep / self.num_timesteps)
+        #predicted_clean = (x_t - self.sqrt_one_minus_alpha_prod[timestep, None, None, None] * predicted) / self.sqrt_alphas_cumprod[timestep, None, None, None]
+        return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
+        #return total_loss_fn(predicted_clean, x)
 
     def sample(self, m: torch.Tensor, p: torch.Tensor, truncate: float = None) -> torch.Tensor:
 
