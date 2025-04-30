@@ -98,7 +98,13 @@ class UnetModel(nn.Module):
         self.down2 = DownBlock(hidden_size, 2 * hidden_size)
         self.down3 = DownBlock(2 * hidden_size, 2 * hidden_size)
 
-        self.to_vec = nn.Sequential(nn.AvgPool2d(2), nn.ReLU())
+        #self.to_vec = nn.Sequential(nn.AvgPool2d(2), nn.ReLU())
+        self.to_vec = nn.Sequential(
+            nn.Conv2d(2 * hidden_size, 2 * hidden_size, 3, 1, 1),
+            nn.ReLU(),
+            nn.Conv2d(2 * hidden_size, 2 * hidden_size, 3),
+            nn.ReLU()
+        )
 
         self.timestep_embedding = TimestepEmbedding(2 * hidden_size)
         self.cond_embedding = ConditionEmbedding(5, 2 * hidden_size)
@@ -114,9 +120,6 @@ class UnetModel(nn.Module):
         self.up3 = UpBlock(2 * hidden_size, hidden_size, 2, 2)
         self.out = nn.Conv2d(2 * hidden_size, self.out_channels, 3, 1, 1)
 
-        self.final_filter = nn.Sequential(nn.Conv2d(out_channels, out_channels, 1),
-                                          nn.Sigmoid())
-
     def forward(self, x: torch.Tensor, m: torch.Tensor, 
                 p: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         x = self.init_conv(x)
@@ -131,11 +134,11 @@ class UnetModel(nn.Module):
         cemb = self.cond_embedding(cond)[:, :, None, None]
 
         thro = self.up0(thro + temb + cemb)
-
-        up1 = self.up1(thro, down3) + temb + cemb
-        up2 = self.up2(up1, down2)
-        up3 = self.up3(up2, down1)
+        print(down3.shape, thro.shape)
+        up1 = self.up1(thro, down3) 
+        up2 = self.up2(up1, down2) 
+        up3 = self.up3(up2, down1) 
 
         out = self.out(torch.cat((up3, x), 1))
 
-        return torch.relu(out * self.final_filter(out))
+        return out
