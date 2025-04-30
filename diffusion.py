@@ -11,7 +11,7 @@ import numpy as np
 from unet_small import UnetModel
 
 
-def total_loss_fn(predicted, target, l_sparsity=0.05, l_energy=0.01, l_outer=0.01, 
+def total_loss_fn(predicted, target, l_sparsity=0.05, l_energy=0.05, l_outer=0.01, 
                   center_x=15, center_y=15, r_cutoff=15):
     """
     predicted: model output, shape [batch, channels, height, width]
@@ -183,6 +183,9 @@ def get_cosine_schedules(num_timesteps: int) -> Dict[str, torch.Tensor]:
 
     sqrt_one_minus_alpha_prod = torch.sqrt(1 - alphas_cumprod)
     one_minus_alpha_over_prod = (1 - alphas) / sqrt_one_minus_alpha_prod
+    sigmas = torch.sqrt(
+        (1 - alphas_cumprod[:-1]) / (1 - alphas_cumprod[1:]) * (1 - alphas_cumprod[1:] / alphas_cumprod[:-1])
+    )
 
     return {
         "alphas": alphas,
@@ -192,4 +195,5 @@ def get_cosine_schedules(num_timesteps: int) -> Dict[str, torch.Tensor]:
         "sqrt_alphas_cumprod": sqrt_alphas_cumprod,
         "sqrt_one_minus_alpha_prod": sqrt_one_minus_alpha_prod,
         "one_minus_alpha_over_prod": one_minus_alpha_over_prod,
+        "sigmas": sigmas
     }
