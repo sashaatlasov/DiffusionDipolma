@@ -135,4 +135,4 @@ class UnetModel(nn.Module):
 
         out = self.out(torch.cat((up3, x), 1))
 
-        return out
+        return torch.relu(out)

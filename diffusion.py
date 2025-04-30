@@ -97,7 +97,7 @@ class DiffusionModel(nn.Module):
 
         x_i = torch.randn(num_samples, *size, device=device)
         for i in tqdm(range(self.num_timesteps - 1, 0, -1), leave=False):
-            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
+            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0 
             eps = self.eps_model(x_i, m, p, torch.tensor(
                 i / self.num_timesteps).repeat(num_samples, 1).to(device))
             x_i = self.inv_sqrt_alphas[i] * (
@@ -164,7 +164,7 @@ def get_schedules(beta1: float, beta2: float, num_timesteps: int) -> Dict[str, t
 
 
 def timestep_to_alpha(timesteps, T):
-    return np.cos((timesteps / T + 0.008) * np.pi / ((1 + 0.008) * 2))
+    return np.cos((timesteps / T + 0.008) * np.pi / ((1 + 0.008) * 2)) ** 2
 
 
 def get_cosine_schedules(num_timesteps: int) -> Dict[str, torch.Tensor]:
@@ -172,11 +172,15 @@ def get_cosine_schedules(num_timesteps: int) -> Dict[str, torch.Tensor]:
     alphas_cumprod = torch.tensor(timestep_to_alpha(
         np.arange(0, num_timesteps + 1), num_timesteps + 1), dtype=torch.float32)
     betas = 1 - alphas_cumprod[1:] / alphas_cumprod[:-1]
-    alphas_cumprod = alphas_cumprod[:-1]
+    betas = torch.clip(betas, min=1e-8, max=0.999)
     sqrt_betas = torch.sqrt(betas)
+
     alphas = 1 - betas
+    alphas_cumprod = torch.cumprod(alphas, dim=0)
+
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
     inv_sqrt_alphas = 1 / torch.sqrt(alphas)
+
     sqrt_one_minus_alpha_prod = torch.sqrt(1 - alphas_cumprod)
     one_minus_alpha_over_prod = (1 - alphas) / sqrt_one_minus_alpha_prod
 
