@@ -42,10 +42,12 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
         print(f"Epoch {i + 1} | Loss {loss}")
         if i % 10 == 0:
             with torch.no_grad():
-                samples = model.sample(momentum.to(DEVICE), point.to(DEVICE))
+                samples = model.sample(momentum.to(DEVICE), point.to(DEVICE), truncate=0)
                 wandb.log({"examples": wandb.Image(samples)}, step=i)
-    torch.save(model.state_dict(), savepath)
 
+    torch.save(model.state_dict(), savepath)
+    wandb.save(savepath)
+    
     prds, prd_curves, stats = calc_metrics(
         model, val_dataloader, t=config['threshold'])
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
