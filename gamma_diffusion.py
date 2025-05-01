@@ -2,6 +2,7 @@ from tqdm.auto import tqdm
 import torch
 import torch.nn as nn
 from typing import Dict, Tuple
+import numpy as np
 
 from unet_small import UnetModel
 
@@ -44,7 +45,7 @@ class GammaDiffusionModel(nn.Module):
 
         return self.criterion(centered_eps / self.sqrt_one_minus_alpha_prod[timestep, None, None, None], self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
-    def sample(self, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
+    def sample(self, m: torch.Tensor, p: torch.Tensor, truncate=None) -> torch.Tensor:
 
         num_samples = m.shape[0]
         device = m.device
@@ -63,6 +64,9 @@ class GammaDiffusionModel(nn.Module):
                 i / self.num_timesteps).repeat(num_samples, 1).to(device))
             x_i = self.inv_sqrt_alphas[i] * (
                 x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
+        
+        if truncate:
+            x_i[x_i < np.log1p(truncate)] = 0
 
         return x_i
 
