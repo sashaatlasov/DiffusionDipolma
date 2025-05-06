@@ -101,11 +101,11 @@ class PhysicsDataset(torch.utils.data.Dataset):
 
 # принимают batch-и x-ов
 def log1p_transform(x: torch.Tensor):
-    return torch.log1p(x)
+    return torch.log1p(x / 5e-3)
 
 
 def log1p_inverse_transform(x: torch.Tensor):
-    return torch.expm1(x)
+    return torch.expm1(x * 5e-3)
 
 
 def get_physics_dataset(path: str, train: bool = True, val_ratio: float = 0.5,
