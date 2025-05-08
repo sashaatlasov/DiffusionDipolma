@@ -77,7 +77,7 @@ embedder = embedder.to(DEVICE)
 
 
 def get_energy_embedding(data):
-    data = torch.log1p(log1p_inverse_transform(data))
+    data = log1p_inverse_transform(data)
     return embedder.get_encoding(data).detach().cpu().numpy()
 
 
