@@ -101,7 +101,7 @@ class DiffusionModel(nn.Module):
                 x_i - eps * self.one_minus_alpha_over_prod[i]) + self.sqrt_betas[i] * z
 
         if truncate:
-            x_i[x_i < np.log1p(truncate)] = 0
+            x_i[x_i < np.log1p(truncate / 5e-3)] = 0
 
         return x_i
 
