@@ -110,7 +110,7 @@ class UnetModel(nn.Module):
         self.down1 = DownBlock(hidden_size, hidden_size)
         self.attn1 = SelfAttentionBlock(hidden_size)
         self.down2 = DownBlock(hidden_size, 2 * hidden_size)
-        self.attn2 = SelfAttentionBlock(2 * hidden_size)
+        self.attn2 = SelfAttentionBlock(hidden_size)
         self.down3 = DownBlock(2 * hidden_size, 2 * hidden_size)
 
         #self.to_vec = nn.Sequential(nn.AvgPool2d(2), nn.ReLU())
@@ -133,7 +133,6 @@ class UnetModel(nn.Module):
 
         self.up1 = UpBlock(4 * hidden_size, 2 * hidden_size, 3, 2)
         self.up2 = UpBlock(4 * hidden_size, hidden_size, 3, 2)
-        self.attn3 = SelfAttentionBlock(hidden_size)
         self.up3 = UpBlock(2 * hidden_size, hidden_size, 2, 2)
         self.out = nn.Conv2d(2 * hidden_size, self.out_channels, 3, 1, 1)
 
@@ -147,18 +146,17 @@ class UnetModel(nn.Module):
         x = self.init_conv(x)
 
         down1 = self.attn1(self.down1(x))
-        down2 = self.attn2(self.down2(down1))
+        down2 = self.down2(down1)
         down3 = self.down3(down2)
 
         thro = self.bottleneck(down3)
         cond = torch.cat((m, p), 1)
         temb = self.timestep_embedding(t)[:, :, None, None]
         cemb = self.cond_embedding(cond)[:, :, None, None]
-        #thro = self.up0(thro + temb + cemb)
 
         up1 = self.up1(thro + temb + cemb, down3) 
         up2 = self.up2(up1, down2) 
-        up3 = self.up3(up2, down1) 
+        up3 = self.attn2(self.up3(up2, down1)) 
 
         out = self.out(torch.cat((up3, x), 1))
 
