@@ -47,7 +47,7 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
 
     torch.save(model.state_dict(), savepath)
     wandb.save(savepath)
-    
+
     prds, prd_curves, stats = calc_metrics(
         model, val_dataloader, t=config['threshold'])
     wandb.log({"E-PRD": prds[0], "P-PRD": prds[1],
@@ -69,7 +69,7 @@ def run_evaluation(config, datapath, checkpoint, gamma=False):
         model = GammaDiffusionModel(
             config['timesteps'], config['hidden_size'], config['theta0'])
     else:
-        model = DiffusionModel(config['timesteps'], config['hidden_size'])
+        model = DiffusionModel(config['timesteps'], config['hidden_size'], config['schedule'])
 
     model = model.to(DEVICE)
     wandb.log({"trainable_params": calc_params(model)}, step=0)
