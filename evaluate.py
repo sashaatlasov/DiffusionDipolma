@@ -72,7 +72,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
     hist2 = plt.hist(sampled, alpha=0.5, bins=75, density=True, color='steelblue',
                      edgecolor='black', label='Diffusion', range=range)
     plt.plot(
-        [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled))}')
+        [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.5f}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
