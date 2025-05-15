@@ -13,7 +13,7 @@ class GammaDiffusionModel(nn.Module):
         num_timesteps: int,
         hidden_size: int,
         theta0: float = 1e-3,
-        betas: Tuple[float, float] = (1e-4, 0.2)
+        betas: Tuple[float, float] = (1e-4, 0.02)
     ):
         super().__init__()
         self.eps_model = UnetModel(1, 1, hidden_size)

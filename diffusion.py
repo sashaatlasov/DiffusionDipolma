@@ -11,41 +11,6 @@ import numpy as np
 from unet_small import UnetModel
 
 
-def total_loss_fn(predicted, target, l_sparsity=0.01, l_energy=0.05, l_outer=0.05, 
-                  center_x=15, center_y=15, r_cutoff=10):
-    """
-    predicted: model output, shape [batch, channels, height, width]
-    target: ground truth energy deposit
-    center_x, center_y: expected center of the shower (can be constant or dynamic)
-    """
-    diffusion_loss = F.mse_loss(predicted, target)
-
-    sparsity_loss = torch.mean(predicted[predicted < np.log1p(5e-3)])  
-    
-    _, _, height, width = predicted.shape
-    device = predicted.device
-
-    y_coords, x_coords = torch.meshgrid(
-        torch.arange(height, device=device), 
-        torch.arange(width, device=device), indexing="ij"
-    )
-    distance_from_center = torch.sqrt((x_coords - center_x)**2 + (y_coords - center_y)**2)
-    outer_mask = (distance_from_center > r_cutoff).float()
-
-    outer_energy = (predicted.squeeze(1) * outer_mask).mean()
-
-    predicted_total = predicted.sum(dim=[1,2,3])
-    target_total = target.sum(dim=[1,2,3])
-    energy_loss = F.l1_loss(predicted_total, target_total)
-
-    total_loss = (diffusion_loss
-                  + l_sparsity * sparsity_loss
-                  + l_energy * energy_loss
-                  + l_outer * outer_energy)
-
-    return total_loss
-
-
 class DiffusionModel(nn.Module):
     def __init__(
         self,
