@@ -1,3 +1,3 @@
 # DiffusionDipolma
 
-Here diffusion models are applied to generate the response of calorimeters in high energy physics. Work in progress...
+Here diffusion models are applied to generate the response of calorimeters in high energy physics. 
