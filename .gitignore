@@ -170,7 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# ignore huge datafile
+# ignore huge datafiles
 data_demo/
 checkpoints/
 artifacts/

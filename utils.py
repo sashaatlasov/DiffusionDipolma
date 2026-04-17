@@ -2,7 +2,7 @@ from tqdm.auto import tqdm
 import torch
 
 def get_local_device() -> torch.device:
-    return torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+    return torch.device('mps') if torch.backends.mps.is_available() else torch.device('cpu')
 
 DEVICE = get_local_device()
 NAMES = ['Longitudual Cluster Asymmetry', 'Transverse Cluster Asymmetry',
