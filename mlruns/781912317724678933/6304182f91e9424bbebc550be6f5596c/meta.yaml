@@ -1,0 +1,14 @@
+artifact_uri: /Users/aaatlasov/Desktop/clones/DiffusionDipolma/mlruns/781912317724678933/6304182f91e9424bbebc550be6f5596c/artifacts
+end_time: 1778154919715
+entry_point_name: ''
+experiment_id: '781912317724678933'
+lifecycle_stage: active
+run_id: 6304182f91e9424bbebc550be6f5596c
+run_name: classic diffusion
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778154918507
+status: 4
+tags: []
+user_id: aaatlasov

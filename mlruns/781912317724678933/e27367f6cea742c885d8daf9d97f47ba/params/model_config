@@ -1,0 +1,1 @@
+{"batch_size": 256, "learning_rate": 0.001, "epochs": 100, "timesteps": 100, "hidden_size": 32, "theta0": 0.001, "threshold": 0.005, "schedule": "linear"}

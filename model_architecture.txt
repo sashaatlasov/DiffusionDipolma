@@ -1,0 +1,96 @@
+DiffusionModel(
+  (eps_model): UNet(
+    (init): ConvBlock(
+      (conv1): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+      (norm1): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+      (act1): ReLU()
+      (conv2): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+      (norm2): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+      (act2): ReLU()
+    )
+    (down1): DownBlock(
+      (conv): ConvBlock(
+        (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm1): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act1): ReLU()
+        (conv2): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm2): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act2): ReLU()
+      )
+      (pool): MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(0, 0))
+    )
+    (down2): DownBlock(
+      (conv): ConvBlock(
+        (conv1): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm1): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act1): ReLU()
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm2): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act2): ReLU()
+      )
+      (pool): MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(0, 0))
+    )
+    (down3): DownBlock(
+      (conv): ConvBlock(
+        (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm1): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act1): ReLU()
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm2): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act2): ReLU()
+      )
+      (pool): MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(0, 0))
+    )
+    (bottleneck): ConvBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+      (norm1): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+      (act1): ReLU()
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+      (norm2): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+      (act2): ReLU()
+    )
+    (up1): UpBlock(
+      (up): ConvTranspose2d(64, 64, kernel_size=(2,), stride=(2, 2), padding=(0, 0), dilation=1, output_padding=(0, 0), bias=True)
+      (conv): ConvBlock(
+        (conv1): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm1): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act1): ReLU()
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm2): GroupNorm(8, 64, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act2): ReLU()
+      )
+    )
+    (up2): UpBlock(
+      (up): ConvTranspose2d(64, 32, kernel_size=(2,), stride=(2, 2), padding=(0, 0), dilation=1, output_padding=(0, 0), bias=True)
+      (conv): ConvBlock(
+        (conv1): Conv2d(96, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm1): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act1): ReLU()
+        (conv2): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm2): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act2): ReLU()
+      )
+    )
+    (up3): UpBlock(
+      (up): ConvTranspose2d(32, 32, kernel_size=(2,), stride=(2, 2), padding=(0, 0), dilation=1, output_padding=(0, 0), bias=True)
+      (conv): ConvBlock(
+        (conv1): Conv2d(64, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm1): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act1): ReLU()
+        (conv2): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), dilation=1, groups=1, bias=True)
+        (norm2): GroupNorm(8, 32, eps=1e-05, affine=True, pytorch_compatible=False)
+        (act2): ReLU()
+      )
+    )
+    (out): Conv2d(32, 1, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0), dilation=1, groups=1, bias=True)
+    (temb): TimestepEmbedding(
+      (lin1): Linear(input_dims=1, output_dims=64, bias=True)
+      (lin2): Linear(input_dims=64, output_dims=64, bias=True)
+    )
+    (cemb): ConditionEmbedding(
+      (lin1): Linear(input_dims=5, output_dims=64, bias=True)
+      (act): ReLU()
+      (lin2): Linear(input_dims=64, output_dims=64, bias=True)
+    )
+  )
+)

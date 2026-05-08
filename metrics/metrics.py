@@ -8,8 +8,8 @@ import torch.utils.data
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from data import collate_fn, move_batch_to, stack_batches
-from utils import get_local_device
+# from data import collate_fn, move_batch_to, stack_batches
+from utils import DEVICE
 from metrics import calogan_metrics, calogan_prd
 from metrics.calogan_prd import plot_pr_aucs, get_energy_embedding
 
@@ -56,68 +56,6 @@ class Metric:
         return self.evaluate(**kwargs)
 
 
-# метрика, которая анализирует GAN, и не анализирует данные
-class ModelMetric(Metric):
-    def prepare_args(self, **kwargs):
-        kwargs = super().prepare_args(**kwargs)
-
-        return {
-            'gan_model': kwargs['gan_model']
-        }
-
-
-class GeneratorAttributeMetric(ModelMetric):
-    def __init__(self, attr_name: str):
-        self.attr_name = attr_name
-        self.NAME = f'generator.{attr_name}'
-
-    def evaluate(self, gan_model, *args, **kwargs) -> float:
-        generator = gan_model.generator
-        return getattr(generator, self.attr_name)
-
-
-class DiscriminatorAttributeMetric(ModelMetric):
-    def __init__(self, attr_name: str):
-        self.attr_name = attr_name
-        self.NAME = f'critic.{attr_name}'
-
-    def evaluate(self, gan_model, *args, **kwargs) -> float:
-        discriminator = gan_model.discriminator
-        return getattr(discriminator, self.attr_name)
-
-
-class GeneratorParameterMetric(ModelMetric):
-    def __init__(self, attr_name: str):
-        self.attr_name = attr_name
-        self.NAME = f'generator.{attr_name}'
-
-    def evaluate(self, gan_model, *args, **kwargs) -> float:
-        generator = gan_model.generator
-        return getattr(generator, self.attr_name).data
-
-
-class DiscriminatorParameterMetric(ModelMetric):
-    def __init__(self, attr_name: str):
-        self.attr_name = attr_name
-        self.NAME = f'critic.{attr_name}'
-
-    def evaluate(self, gan_model, *args, **kwargs) -> float:
-        discriminator = gan_model.discriminator
-        return getattr(discriminator, self.attr_name).data
-
-
-class BetaMetric(ModelMetric):
-    NAME = 'beta'
-
-    def evaluate(self, gan_model, *args, **kwargs) -> float:
-        discriminator = gan_model.discriminator
-        # пока только для одного beta
-        if isinstance(discriminator, WeakSpectralNormalizer):
-            return discriminator.beta.data.item()
-        else:
-            return 1.
-
-
 def generate_data(gan_model, dataloader: torch.utils.data.DataLoader,
                   gen_size: Optional[int] = None) -> Generator:
     """
@@ -125,14 +63,14 @@ def generate_data(gan_model, dataloader: torch.utils.data.DataLoader,
 
     если gen_size None, то генерируются по всему dataloader, иначе генерируется хотя бы gen_size значений
     """
-    gan_model = gan_model.to(get_local_device())
+    gan_model = gan_model.to(DEVICE)
 
     gen_data_batches = []
     current_gen_size = 0
     for batch in dataloader:
         batch_x, batch_y = batch
-        batch_y = move_batch_to(batch_y, get_local_device())
-        noise_batch_z = gan_model.gen_noise(len(batch_x)).to(get_local_device())
+        batch_y = move_batch_to(batch_y, DEVICE)
+        noise_batch_z = gan_model.gen_noise(len(batch_x)).to(DEVICE)
         gen_batch_x = gan_model.generator(noise_batch_z, batch_y)
         gen_data_batches.append((gen_batch_x.cpu(), move_batch_to(batch_y, torch.device('cpu'))))
         yield gen_batch_x.cpu(), move_batch_to(batch_y, torch.device('cpu'))
@@ -271,8 +209,8 @@ class CriticValuesDistributionMetric(DataMetric):
         critic_vals_gen = []
         for gen_batch, real_batch in zip(gen_data, val_data):
             with torch.no_grad():
-                gen_batch_x, gen_batch_y = move_batch_to(gen_batch, get_local_device())
-                real_batch_x, real_batch_y = move_batch_to(real_batch, get_local_device())
+                gen_batch_x, gen_batch_y = move_batch_to(gen_batch, DEVICE)
+                real_batch_x, real_batch_y = move_batch_to(real_batch, DEVICE)
 
                 true_vals = gan_model.discriminator(real_batch_x, real_batch_y)
                 critic_vals_true.append(true_vals)
@@ -302,7 +240,7 @@ class CriticValuesStats(DataMetric):
             all_critic_vals = []
             with torch.no_grad():
                 for batch in data:
-                    batch_x, batch_y = move_batch_to(batch, get_local_device())
+                    batch_x, batch_y = move_batch_to(batch, DEVICE)
                     critic_vals = gan_model.discriminator(batch_x, batch_y)
                     all_critic_vals.append(critic_vals)
             all_critic_vals = torch.cat(all_critic_vals)
