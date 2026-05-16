@@ -110,7 +110,9 @@ class UnetModel(nn.Module):
         self.down1 = DownBlock(hidden_size, hidden_size)
         self.attn1 = SelfAttentionBlock(hidden_size)
         self.down2 = DownBlock(hidden_size, 2 * hidden_size)
+        self.attn2 = SelfAttentionBlock(2 * hidden_size)
         self.down3 = DownBlock(2 * hidden_size, 2 * hidden_size)
+
 
         self.bottleneck = SelfAttentionBlock(2 * hidden_size)
 
@@ -132,7 +134,7 @@ class UnetModel(nn.Module):
         x = self.init_conv(x)
 
         down1 = self.attn1(self.down1(x))
-        down2 = self.down2(down1)
+        down2 = self.attn2(self.down2(down1))
         down3 = self.down3(down2)
 
         thro = self.bottleneck(down3)

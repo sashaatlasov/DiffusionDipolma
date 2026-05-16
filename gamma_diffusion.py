@@ -25,11 +25,11 @@ class GammaDiffusionModel(nn.Module):
         self.criterion = nn.L1Loss()
 
     def sample_gamma(self, timestep: torch.Tensor, device: str = 'cpu',
-                     shape: Tuple[int] = (1, 30, 30)) -> Tuple[torch.Tensor]:
+                 shape: Tuple[int] = (1, 30, 30)) -> Tuple[torch.Tensor]:
         k, theta = self.k_t_bar[timestep], self.theta_t[timestep]
-        gamma = torch.distributions.Gamma(k, 1 / theta)
-        eps = gamma.sample(shape).squeeze(-1).permute(3, 0, 1, 2).to(device)
-        return eps, (eps - (k * theta)[:, None, None, None])
+        gamma = torch.distributions.Gamma(k.cpu(), 1 / theta.cpu())
+        eps = gamma.sample(shape).permute(3, 0, 1, 2).to(device) # squeeze(-1)
+        return eps, (eps - (k * theta)[:, None, None, None].to(device))
 
     def forward(self, x: torch.Tensor, m: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
 
@@ -56,7 +56,8 @@ class GammaDiffusionModel(nn.Module):
         for i in tqdm(range(self.num_timesteps, 0, -1), leave=False):
             i = torch.tensor([i]).repeat(num_samples)
             if i[0] > 1:
-                z = self.sample_gamma(i, device)[1] / self.sqrt_one_minus_alpha_prod[i[0]]
+                i_prev = i - 1
+                z = self.sample_gamma(i_prev, device)[1] / self.sqrt_one_minus_alpha_prod[i_prev[0]]
             else:
                 z = 0
             i = i[0]

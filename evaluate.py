@@ -72,7 +72,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
     hist2 = plt.hist(sampled, alpha=0.5, bins=75, density=True, color='steelblue',
                      edgecolor='black', label='Diffusion', range=range)
     plt.plot(
-        [], [], ' ', label=f'KL: {kl_div(hist1[0] / len(real), hist2[0] / len(sampled)):.5f}')
+        [], [], ' ', label=f'KL: {kl_div(hist1[0], hist2[0]):.4f}')
     plt.title(name)
     plt.grid(axis='y')
     plt.legend()
@@ -80,7 +80,7 @@ def plot_stat_distribution(real, sampled, name, range=None):
     return fig
 
 
-def sample_energy(model, val_data, num_batches, t):
+def sample_energy(model, val_data, num_batches, t, speed):
     model.eval()
     all_sampled_embeds, all_real_embeds, all_point, all_momentum = [], [], [], []
     all_extra_embeds_real, all_extra_embeds_sampled = [], []
@@ -92,7 +92,12 @@ def sample_energy(model, val_data, num_batches, t):
         energy, point, momentum = map(
             lambda x: x.to(DEVICE), (energy, point, momentum))
         with torch.no_grad():
-            samples = model.sample(momentum, point, truncate=t)
+            if speed == "implicit":
+                samples = model.implicit_sample(momentum, point, truncate=t)
+            elif speed == "solver":
+                samples = model.dpm_sample(momentum, point, truncate=t, order=2)
+            else:
+                samples = model.sample(momentum, point, truncate=t)
             sampled_embeds = get_energy_embedding(samples)
             real_embeds = get_energy_embedding(energy)
 
@@ -124,13 +129,13 @@ def sample_energy(model, val_data, num_batches, t):
     )
 
 
-def calc_metrics(model, val_data, num_batches=None, t=None):
+def calc_metrics(model, val_data, num_batches=None, t=None, speed=None):
     ranges = [None, None, (0, 15), (0, 7)]
 
     if num_batches is None:
         num_batches = len(val_data)
 
-    val_data, gen_data = sample_energy(model, val_data, num_batches, t=t)
+    val_data, gen_data = sample_energy(model, val_data, num_batches, t, speed)
 
     stat_dists = []
     for i in range(len(NAMES)):

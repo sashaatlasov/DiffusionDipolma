@@ -174,5 +174,7 @@ cython_debug/
 data_demo/
 checkpoints/
 artifacts/
+mlruns/
+mlflow.db
 
 .DS_Store

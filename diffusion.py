@@ -12,6 +12,7 @@ from unet_small import UnetModel
 
 
 class DiffusionModel(nn.Module):
+
     def __init__(
         self,
         num_timesteps: int,
@@ -27,7 +28,7 @@ class DiffusionModel(nn.Module):
             for name, schedule in get_schedules(betas[0], betas[1], num_timesteps).items():
                 self.register_buffer(name, schedule)
         elif schedule == 'cosine':
-            for name, schedule in get_cosine_schedules(num_timesteps + 1).items():
+            for name, schedule in get_schedules(betas[0], betas[1], num_timesteps).items():
                 self.register_buffer(name, schedule)
         self.num_timesteps = num_timesteps
 
@@ -48,7 +49,7 @@ class DiffusionModel(nn.Module):
         x_t = (
             self.sqrt_alphas_cumprod[timestep, None, None, None] * x
             + self.sqrt_one_minus_alpha_prod[timestep, None, None, None] * eps
-        ) 
+        )
         return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
     def sample(self, m: torch.Tensor, p: torch.Tensor, truncate: float = None) -> torch.Tensor:
@@ -59,7 +60,7 @@ class DiffusionModel(nn.Module):
 
         x_i = torch.randn(num_samples, *size, device=device)
         for i in tqdm(range(self.num_timesteps - 1, 0, -1), leave=False):
-            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0 
+            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
             eps = self.eps_model(x_i, m, p, torch.tensor(
                 i / self.num_timesteps).repeat(num_samples, 1).to(device))
             x_i = self.inv_sqrt_alphas[i] * (
@@ -70,6 +71,212 @@ class DiffusionModel(nn.Module):
 
         return x_i
 
+    def implicit_sample(self, m: torch.Tensor, p: torch.Tensor, num_steps: int = 20,
+                    eta: float = 0.5, truncate: float = None) -> torch.Tensor:
+        size = (1, 30, 30)
+        num_samples = m.shape[0]
+        device = m.device
+
+        x_i = torch.randn(num_samples, *size, device=device)
+
+        sub_seq = list(reversed(
+            torch.linspace(1, self.num_timesteps, num_steps).long().tolist()
+        ))  
+
+        for i in tqdm(range(len(sub_seq) - 1), leave=False):
+            t, t1 = sub_seq[i], sub_seq[i + 1]
+
+            eps = self.eps_model(x_i, m, p,
+                            torch.tensor([t / self.num_timesteps]).repeat(num_samples, 1).to(device))
+
+            alpha_t  = self.alphas_cumprod[t]
+            alpha_t1 = self.alphas_cumprod[t1]
+
+            x0_pred = (x_i - torch.sqrt(1 - alpha_t) * eps) / torch.sqrt(alpha_t)
+
+            sigma = eta * torch.sqrt((1 - alpha_t1) / (1 - alpha_t)) \
+                        * torch.sqrt(1 - alpha_t / alpha_t1)
+
+            direction_coeff = torch.sqrt(
+                torch.clamp(1 - alpha_t1 - sigma ** 2, min=0.0)
+            )
+            direction = direction_coeff * eps
+
+            noise = sigma * torch.randn_like(x_i) if eta > 0 else 0
+
+            x_i = torch.sqrt(alpha_t1) * x0_pred + direction + noise
+
+        if truncate:
+            x_i[x_i < np.log1p(truncate / 5e-3)] = 0
+
+        return x_i
+
+
+    def _dpm_get_alpha_sigma(self, t_continuous: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        T = self.num_timesteps
+        idx = (t_continuous * T).long().clamp(1, T)
+        ab = self.alphas_cumprod[idx]          
+        alpha = torch.sqrt(ab)
+        sigma = torch.sqrt(1.0 - ab)
+        return alpha, sigma
+ 
+    def _dpm_lambda(self, t_continuous: torch.Tensor) -> torch.Tensor:
+        alpha, sigma = self._dpm_get_alpha_sigma(t_continuous)
+        return torch.log(alpha / sigma.clamp(min=1e-8))
+ 
+    def _dpm_eps(
+        self,
+        x: torch.Tensor,
+        m: torch.Tensor,
+        p: torch.Tensor,
+        t_continuous: torch.Tensor,   
+    ) -> torch.Tensor:
+        num_samples = x.shape[0]
+        t_ratio = t_continuous.reshape(1).repeat(num_samples, 1) 
+        return self.eps_model(x, m, p, t_ratio)
+ 
+    def _dpm_step1(
+        self,
+        x_s: torch.Tensor,
+        m: torch.Tensor,
+        p: torch.Tensor,
+        t_s: torch.Tensor,
+        t_t: torch.Tensor,
+        eps_s: torch.Tensor = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Один шаг DPM-Solver 1-го порядка.
+        s — текущее (более шумное) состояние, t — следующее (менее шумное).
+ 
+        Из точного решения probability flow ODE (Lu et al., 2022, Eq. 4):
+ 
+            x_t = (α_t/α_s)·x_s  −  σ_t·(eʰ − 1)·ε_θ(x_s, s)
+ 
+        где h = λ_t − λ_s > 0.
+ 
+        Ключевые моменты:
+          - множитель σ_t (НЕ α_t)
+          - exp(h) − 1 > 0  →  eps вычитается  →  шум убирается ✓
+ 
+        Возвращает (x_t, eps_s) — eps_s переиспользуется в step2.
+        """
+        lam_s = self._dpm_lambda(t_s)
+        lam_t = self._dpm_lambda(t_t)
+        h = lam_t - lam_s                        # > 0: λ растёт при уменьшении шума
+ 
+        alpha_t, sigma_t = self._dpm_get_alpha_sigma(t_t)
+        alpha_s, _       = self._dpm_get_alpha_sigma(t_s)
+ 
+        if eps_s is None:
+            eps_s = self._dpm_eps(x_s, m, p, t_s)
+ 
+        coeff = torch.exp(h) - 1.0               # > 0
+        x_t = (alpha_t / alpha_s) * x_s - sigma_t * coeff * eps_s
+        return x_t, eps_s
+ 
+    def _dpm_step2(
+        self,
+        x_s: torch.Tensor,
+        m: torch.Tensor,
+        p: torch.Tensor,
+        t_s: torch.Tensor,
+        t_t: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Один шаг DPM-Solver 2-го порядка.
+ 
+        Из разложения ε_θ по λ до первого порядка (Lu et al., 2022):
+ 
+            x_t = (α_t/α_s)·x_s
+                  − σ_t·(eʰ − 1)·ε_s
+                  − σ_t·((h−1)·eʰ + 1)·D₁
+ 
+        где D₁ = (ε_mid − ε_s) / r — оценка производной ε по λ,
+        r = h_mid / h ≈ 0.5.
+ 
+        Коэффициент (h−1)·eʰ + 1 получается из интеграла ∫₀ʰ h′·eʰ′ dh′.
+        При малом h: (h−1)·eʰ+1 ≈ h²/2 — квадратичная поправка.
+        """
+        device = x_s.device
+        t_mid = ((t_s + t_t) / 2.0).to(device)
+ 
+        eps_s = self._dpm_eps(x_s, m, p, t_s)
+        if torch.isnan(eps_s).any():
+            print(f"eps_s nan: {torch.isnan(eps_s).any()}, max: {eps_s.abs().max():.2f}")
+
+        x_mid, _ = self._dpm_step1(x_s, m, p, t_s, t_mid, eps_s=eps_s)
+        if torch.isnan(x_mid).any():
+            print(f"x_mid nan: {torch.isnan(x_mid).any()}, max: {x_mid.abs().max():.2f}")
+
+
+        lam_s   = self._dpm_lambda(t_s)
+        lam_t   = self._dpm_lambda(t_t)
+        lam_mid = self._dpm_lambda(t_mid)
+ 
+        h     = lam_t   - lam_s     
+        h_mid = lam_mid - lam_s     
+        if torch.isnan(h_mid).any():
+            print(f"h={h:.5f}, h_mid={h_mid:.5f}")
+ 
+        alpha_t, sigma_t = self._dpm_get_alpha_sigma(t_t)
+        alpha_s, _       = self._dpm_get_alpha_sigma(t_s)
+ 
+        eps_mid = self._dpm_eps(x_mid, m, p, t_mid)
+        if torch.isnan(eps_mid).any():
+            print(f"eps_mid nan: {torch.isnan(eps_mid).any()}, max: {eps_mid.abs().max():.2f}")
+
+        coeff_1 = torch.exp(h) - 1.0
+        coeff_2 = (h - 1.0) * torch.exp(h) + 1.0
+ 
+        if h.abs() > 1e-3:
+            r  = h_mid / h          
+            D1 = (eps_mid - eps_s) / r
+            if torch.isnan(D1).any():
+                print(f"r={r:.4f}, D1 max: {D1.abs().max():.2f}, nan: {torch.isnan(D1).any()}")
+        else:
+            D1 = torch.zeros_like(eps_s)
+ 
+        x_t = (alpha_t / alpha_s) * x_s \
+              - sigma_t * coeff_1 * eps_s \
+              - sigma_t * coeff_2 * D1
+        return x_t
+ 
+    @torch.no_grad()
+    def dpm_sample(
+        self,
+        m: torch.Tensor,
+        p: torch.Tensor,
+        num_steps: int = 20,
+        order: int = 2,
+        truncate: float = None,
+    ) -> torch.Tensor:
+
+        assert order in (1, 2), "order должен быть 1 или 2"
+ 
+        size = (1, 30, 30)
+        num_samples = m.shape[0]
+        device = m.device
+ 
+        x = torch.randn(num_samples, *size, device=device)
+ 
+        t_max = (self.num_timesteps - 1) / self.num_timesteps
+        eps_t = 1.0 / self.num_timesteps
+        t_seq = torch.linspace(t_max, eps_t, num_steps + 1).to(device)
+ 
+        for i in tqdm(range(num_steps), desc=f'DPM-Solver-{order}', leave=False):
+            t_s = t_seq[i]
+            t_t = t_seq[i + 1]
+ 
+            if order == 2:
+                x = self._dpm_step2(x, m, p, t_s, t_t)
+            else:
+                x, _ = self._dpm_step1(x, m, p, t_s, t_t)
+ 
+        if truncate:
+            x[x < np.log1p(truncate / 5e-3)] = 0
+ 
+        return x
+    
     def sample_single(self, m: torch.Tensor, p: torch.Tensor, plot=False, name='animation') -> torch.Tensor:
         device = m.device
         x_i = torch.randn(1, 1, 30, 30, device=device)
