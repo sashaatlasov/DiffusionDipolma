@@ -87,10 +87,10 @@ def run_experiment(config, datapath, savepath, name='classic diffusion', gamma=F
         _log_metric_figures(prd_curves, stats)
 
 
-def run_evaluation(config, datapath, checkpoint, gamma=False, speed=None):
+def run_evaluation(name, config, datapath, checkpoint, gamma=False, speed=None):
     mlflow.set_experiment("Metrics")
 
-    with mlflow.start_run(run_name="evaluated"):
+    with mlflow.start_run(run_name=name):
         mlflow.log_params(config)
         mlflow.log_param("checkpoint", checkpoint)
 

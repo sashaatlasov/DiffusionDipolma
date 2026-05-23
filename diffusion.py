@@ -52,6 +52,7 @@ class DiffusionModel(nn.Module):
         )
         return self.criterion(eps, self.eps_model(x_t, m, p, timestep / self.num_timesteps))
 
+    @torch.no_grad()
     def sample(self, m: torch.Tensor, p: torch.Tensor, truncate: float = None) -> torch.Tensor:
 
         size = (1, 30, 30)
@@ -71,7 +72,8 @@ class DiffusionModel(nn.Module):
 
         return x_i
 
-    def implicit_sample(self, m: torch.Tensor, p: torch.Tensor, num_steps: int = 20,
+    @torch.no_grad()
+    def implicit_sample(self, m: torch.Tensor, p: torch.Tensor, num_steps: int = 10,
                     eta: float = 0.5, truncate: float = None) -> torch.Tensor:
         size = (1, 30, 30)
         num_samples = m.shape[0]
@@ -94,8 +96,8 @@ class DiffusionModel(nn.Module):
 
             x0_pred = (x_i - torch.sqrt(1 - alpha_t) * eps) / torch.sqrt(alpha_t)
 
-            sigma = eta * torch.sqrt((1 - alpha_t1) / (1 - alpha_t)) \
-                        * torch.sqrt(1 - alpha_t / alpha_t1)
+            sigma = eta * torch.sqrt((1 - alpha_t1) / (1 - alpha_t).clamp(min=1e-8)) \
+                        * torch.sqrt((1 - alpha_t / alpha_t1).clamp(min=0.0))
 
             direction_coeff = torch.sqrt(
                 torch.clamp(1 - alpha_t1 - sigma ** 2, min=0.0)
@@ -144,25 +146,10 @@ class DiffusionModel(nn.Module):
         t_t: torch.Tensor,
         eps_s: torch.Tensor = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Один шаг DPM-Solver 1-го порядка.
-        s — текущее (более шумное) состояние, t — следующее (менее шумное).
- 
-        Из точного решения probability flow ODE (Lu et al., 2022, Eq. 4):
- 
-            x_t = (α_t/α_s)·x_s  −  σ_t·(eʰ − 1)·ε_θ(x_s, s)
- 
-        где h = λ_t − λ_s > 0.
- 
-        Ключевые моменты:
-          - множитель σ_t (НЕ α_t)
-          - exp(h) − 1 > 0  →  eps вычитается  →  шум убирается ✓
- 
-        Возвращает (x_t, eps_s) — eps_s переиспользуется в step2.
-        """
+    
         lam_s = self._dpm_lambda(t_s)
         lam_t = self._dpm_lambda(t_t)
-        h = lam_t - lam_s                        # > 0: λ растёт при уменьшении шума
+        h = lam_t - lam_s                        
  
         alpha_t, sigma_t = self._dpm_get_alpha_sigma(t_t)
         alpha_s, _       = self._dpm_get_alpha_sigma(t_s)
@@ -170,7 +157,7 @@ class DiffusionModel(nn.Module):
         if eps_s is None:
             eps_s = self._dpm_eps(x_s, m, p, t_s)
  
-        coeff = torch.exp(h) - 1.0               # > 0
+        coeff = torch.exp(h) - 1.0               
         x_t = (alpha_t / alpha_s) * x_s - sigma_t * coeff * eps_s
         return x_t, eps_s
  
@@ -182,21 +169,7 @@ class DiffusionModel(nn.Module):
         t_s: torch.Tensor,
         t_t: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Один шаг DPM-Solver 2-го порядка.
- 
-        Из разложения ε_θ по λ до первого порядка (Lu et al., 2022):
- 
-            x_t = (α_t/α_s)·x_s
-                  − σ_t·(eʰ − 1)·ε_s
-                  − σ_t·((h−1)·eʰ + 1)·D₁
- 
-        где D₁ = (ε_mid − ε_s) / r — оценка производной ε по λ,
-        r = h_mid / h ≈ 0.5.
- 
-        Коэффициент (h−1)·eʰ + 1 получается из интеграла ∫₀ʰ h′·eʰ′ dh′.
-        При малом h: (h−1)·eʰ+1 ≈ h²/2 — квадратичная поправка.
-        """
+        
         device = x_s.device
         t_mid = ((t_s + t_t) / 2.0).to(device)
  
@@ -246,7 +219,7 @@ class DiffusionModel(nn.Module):
         self,
         m: torch.Tensor,
         p: torch.Tensor,
-        num_steps: int = 20,
+        num_steps: int = 10,
         order: int = 2,
         truncate: float = None,
     ) -> torch.Tensor:

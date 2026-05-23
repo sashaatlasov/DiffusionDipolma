@@ -143,11 +143,11 @@ def calc_metrics(model, val_data, num_batches=None, t=None, speed=None):
             val_data[1][:, i], gen_data[1][:, i], NAMES[i], range=ranges[i])
         stat_dists.append(fig)
 
-    prec, rec = calc_pr_rec_from_embeds(val_data[0], gen_data[0])
+    prec, rec = calc_pr_rec_from_embeds(val_data[0], gen_data[0], enforce_balance=False)
     result, fig1 = plot_pr_aucs(prec, rec)
     total_prd = np.mean(result)
 
-    prec, rec = calc_pr_rec_from_embeds(val_data[1], gen_data[1])
+    prec, rec = calc_pr_rec_from_embeds(val_data[1], gen_data[1], enforce_balance=False)
     result, fig2 = plot_pr_aucs(prec, rec)
     prd_phys = np.mean(result)
 
