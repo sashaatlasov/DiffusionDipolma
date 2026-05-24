@@ -176,5 +176,6 @@ checkpoints/
 artifacts/
 mlruns/
 mlflow.db
+test.ipynb
 
 .DS_Store
